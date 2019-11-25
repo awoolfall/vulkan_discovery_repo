@@ -11,14 +11,13 @@ set(GLFW_BUILD_DOCS OFF)
 set(GLFW_INSTALL OFF)
 add_subdirectory(vendor/glfw)
 
-set(EASTL_BUILD_TESTS ON) # because EASTL build is currently broken when not building tests
-add_subdirectory(vendor/EASTL)
-
 file(GLOB DISCOVERY_src
     "src/*.cpp"
 )
 
-add_executable(discovery ${DISCOVERY_src})
+add_library(discovery_lib ${DISCOVERY_src})
+
+add_executable(discovery entry_point.cpp)
 
 set(VENDOR_INCLUDES
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/include"
@@ -26,8 +25,12 @@ set(VENDOR_INCLUDES
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glm"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glfw/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/EASTL/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/entt/src"
+)
+
+target_include_directories(discovery_lib PRIVATE 
+    ${VENDOR_INCLUDES}
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 target_include_directories(discovery PRIVATE 
@@ -35,10 +38,13 @@ target_include_directories(discovery PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
-target_link_libraries(discovery
-    EASTL
+target_link_libraries(discovery_lib 
     glad
     glfw
+)
+
+target_link_libraries(discovery 
+    discovery_lib
 )
 
 # copy contents of res/ into the directory of the output executable

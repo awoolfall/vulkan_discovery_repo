@@ -6,7 +6,7 @@
 GLuint attach_combined_glsl(GLuint shader_program, const char* abs_file_path)
 {
     /* read text files located at pVertShaderPath and pFragShaderPath */
-    std::string ShaderSrc = std::string(read_string_from_file(eastl::string(abs_file_path)).c_str());
+    std::string ShaderSrc = std::string(read_string_from_file(std::string(abs_file_path)).c_str());
 
     /*
      * extract each shader type from shader_src

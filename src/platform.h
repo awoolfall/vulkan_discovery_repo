@@ -1,9 +1,9 @@
 #pragma once
 
-#include <EASTL/string.h>
+#include <string>
 
 // converts relative path to an absolute path
-eastl::string to_absolute_path(eastl::string pRelativePath);
+std::string to_absolute_path(std::string pRelativePath);
 
 // reads a string file using an absolute file path
-eastl::string read_string_from_file(eastl::string pAbsolutePath);
+std::string read_string_from_file(std::string pAbsolutePath);
