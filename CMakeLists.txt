@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
-set (CMAKE_CXX_STANDARD 11)
-project(DISCOVERY_GAME)
+set (CMAKE_CXX_STANDARD 17)
+project(discovery)
 
-add_library(GLAD vendor/include/glad/glad.c)
+add_library(glad vendor/include/glad/glad.c)
 
 set(BUILD_SHARED_LIBS OFF)
 set(GLFW_BUILD_EXAMPLES OFF)
@@ -18,7 +18,7 @@ file(GLOB DISCOVERY_src
     "src/*.cpp"
 )
 
-add_executable(DISCOVERY_GAME ${DISCOVERY_src})
+add_executable(discovery ${DISCOVERY_src})
 
 set(VENDOR_INCLUDES
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/include"
@@ -27,15 +27,25 @@ set(VENDOR_INCLUDES
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glfw/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/EASTL/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/entt/src"
 )
 
-target_include_directories(DISCOVERY_GAME PRIVATE 
+target_include_directories(discovery PRIVATE 
     ${VENDOR_INCLUDES}
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
-target_link_libraries(DISCOVERY_GAME
+target_link_libraries(discovery
     EASTL
-    GLAD
+    glad
     glfw
 )
+
+# copy contents of res/ into the directory of the output executable
+add_custom_command(TARGET discovery PRE_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E remove_directory
+                    $<TARGET_FILE_DIR:discovery>/res)
+                    
+add_custom_command(TARGET discovery PRE_BUILD 
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    ${CMAKE_CURRENT_SOURCE_DIR}/res $<TARGET_FILE_DIR:discovery>/res)
