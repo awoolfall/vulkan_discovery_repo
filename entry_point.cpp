@@ -35,6 +35,11 @@ struct transform
     struct { float x=1.0f, y=1.0f, z=1.0f; } scale;
 };
 
+struct quad_renderer
+{
+    int placeholder;
+};
+
 struct velocity
 {
     double x = 0.0;
@@ -51,6 +56,17 @@ glm::mat4 get_model_matrix(transform& t)
     model = glm::rotate(model, glm::radians(t.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::rotate(model, glm::radians(t.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
     return model;
+}
+
+glm::mat4 get_view_matrix(transform &t)
+{
+    glm::mat4 view(1.0f);
+    view = glm::translate(view, glm::vec3(t.position.x, t.position.y, t.position.z));
+    view = glm::rotate(view, glm::radians(t.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+    view = glm::rotate(view, glm::radians(t.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+    view = glm::rotate(view, glm::radians(t.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    view = glm::inverse(view);
+    return view;
 }
 
 int main(int argc, char* argv)
@@ -106,37 +122,43 @@ int main(int argc, char* argv)
     entt::registry Registry;
     auto [e, t] = Registry.create<transform>();
     t.position.x = -2.0f;
-    Registry.create<transform>();
+    Registry.assign<quad_renderer> (e);
+    Registry.create<transform, quad_renderer>();
+    auto [cam, cam_transform] = Registry.create<transform> ();
 
-    glm::vec3 cam_pos(0.0f, 0.0f, 0.0f);
     unsigned int model_location = glGetUniformLocation(shader, "model");
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT);
         glClear(GL_DEPTH_BUFFER_BIT);
 
         if (glfwGetKey(window, GLFW_KEY_W)) {
-            cam_pos.y -= 0.001f;
+            cam_transform.position.y += 0.001f;
         }
         if (glfwGetKey(window, GLFW_KEY_S)) {
-            cam_pos.y += 0.001f;
+            cam_transform.position.y -= 0.001f;
         }
         if (glfwGetKey(window, GLFW_KEY_A)) {
-            cam_pos.x += 0.001f;
+            cam_transform.position.x -= 0.001f;
         }
         if (glfwGetKey(window, GLFW_KEY_D)) {
-            cam_pos.x -= 0.001f;
+            cam_transform.position.x += 0.001f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_E)) {
+            cam_transform.rotation.z += 0.1f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_Q)) {
+            cam_transform.rotation.z -= 0.1f;
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) {
-            cam_pos.z += 0.001f;
+            cam_transform.position.z += 0.1f;
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL)) {
-            cam_pos.z -= 0.001f;
+            cam_transform.position.z -= 0.001f;
         }
-        view = glm::mat4(1.0f);
-        view = glm::translate(view, cam_pos);
-        glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(view));
-
-        Registry.view<transform> ().each([model_location](transform& t){
+        // view = glm::mat4(1.0f);
+        // view = glm::translate(view, glm::vec3(cam_transform.position.x, cam_transform.position.y, cam_transform.position.z));
+        glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(get_view_matrix(cam_transform)));
+        Registry.view<quad_renderer, transform> ().each([model_location](quad_renderer &r, transform& t){
             glUniformMatrix4fv(model_location, 1, GL_FALSE, glm::value_ptr(get_model_matrix(t)));
             glDrawArrays(GL_TRIANGLES, 0, 6);
         });
