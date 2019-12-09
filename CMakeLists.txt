@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.5)
 set (CMAKE_CXX_STANDARD 17)
 project(discovery)
 
+find_package(Vulkan REQUIRED)
+
 add_library(glad vendor/include/glad/glad.c)
 
 set(BUILD_SHARED_LIBS OFF)
@@ -26,6 +28,7 @@ set(VENDOR_INCLUDES
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glfw/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/entt/src"
+    ${Vulkan_INCLUDE_DIRS}
 )
 
 target_include_directories(discovery_lib PRIVATE 
@@ -41,6 +44,7 @@ target_include_directories(discovery PRIVATE
 target_link_libraries(discovery_lib 
     glad
     glfw
+    ${Vulkan_LIBRARIES}
 )
 
 target_link_libraries(discovery 
