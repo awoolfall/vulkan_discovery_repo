@@ -12,42 +12,148 @@ VkPipelineInputAssemblyStateCreateInfo graphics_pipeline::gen_input_assembly_inf
 
 std::vector<VkViewport> graphics_pipeline::gen_viewport(vulkan_data& data)
 {
+    VkViewport viewport = {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float) data.swap_chain_data.extent.width;
+    viewport.height = (float) data.swap_chain_data.extent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
 
+    std::vector<VkViewport> viewports;
+    viewports.push_back(viewport);
+    return viewports;
 }
 
 std::vector<VkRect2D> graphics_pipeline::gen_scissor(vulkan_data& data)
 {
+    VkRect2D scissor = {};
+    scissor.offset = {0, 0};
+    scissor.extent = data.swap_chain_data.extent;
 
+    std::vector<VkRect2D> scissors;
+    scissors.push_back(scissor);
+    return scissors;
 }
 
 VkPipelineRasterizationStateCreateInfo graphics_pipeline::gen_rasterization_state_info(vulkan_data& data)
 {
+    VkPipelineRasterizationStateCreateInfo rasterizer = {};
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.rasterizerDiscardEnable = VK_FALSE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.depthBiasEnable = VK_FALSE;
+    rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+    rasterizer.depthBiasClamp = 0.0f; // Optional
+    rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
 
+    return rasterizer;
 }
 
 VkPipelineMultisampleStateCreateInfo graphics_pipeline::gen_multisampling_state_info(vulkan_data& data)
 {
+    VkPipelineMultisampleStateCreateInfo multisampling = {};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisampling.minSampleShading = 1.0f; // Optional
+    multisampling.pSampleMask = nullptr; // Optional
+    multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+    multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
+    return multisampling;
 }
 
 VkPipelineColorBlendStateCreateInfo graphics_pipeline::gen_color_blend_state(vulkan_data& data, std::vector<VkPipelineColorBlendAttachmentState>& attachment_states)
 {
+    VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_TRUE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    attachment_states.push_back(colorBlendAttachment);
 
+    VkPipelineColorBlendStateCreateInfo colorBlending = {};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+    colorBlending.attachmentCount = attachment_states.size();
+    colorBlending.pAttachments = attachment_states.data();
+    colorBlending.blendConstants[0] = 0.0f; // Optional
+    colorBlending.blendConstants[1] = 0.0f; // Optional
+    colorBlending.blendConstants[2] = 0.0f; // Optional
+    colorBlending.blendConstants[3] = 0.0f; // Optional
+
+    return colorBlending;
 }
 
 std::vector<VkDynamicState> graphics_pipeline::gen_dynamic_state_info(vulkan_data& data)
 {
-
+    std::vector<VkDynamicState> dynamicStates = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_LINE_WIDTH
+    };
+    return dynamicStates;
 }
 
 VkPipelineLayout graphics_pipeline::gen_pipeline_layout(vulkan_data& data)
 {
+    VkPipelineLayout pipelineLayout;
 
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 0; // Optional
+    pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+    pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+    if (vkCreatePipelineLayout(data.logical_device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+    }
+    return pipelineLayout;
 }
 
 VkRenderPass graphics_pipeline::gen_render_pass(vulkan_data& data)
 {
+    VkAttachmentDescription colorAttachment = {};
+    colorAttachment.format = data.swap_chain_data.image_format;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+    VkAttachmentReference colorAttachmentRef = {};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    
+    VkSubpassDescription subpass = {};  
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+
+    VkRenderPass render_pass;
+    if (vkCreateRenderPass(data.logical_device, &renderPassInfo, nullptr, &render_pass) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
+    return render_pass;
 }
 
 std::vector<VkPipelineShaderStageCreateInfo> graphics_pipeline::load_shader_stage_infos(vulkan_data& data)
@@ -68,7 +174,7 @@ void graphics_pipeline::initialise(vulkan_data& data, std::vector<VkPipelineShad
     std::vector<VkPipelineColorBlendAttachmentState> attachment_states;
     VkPipelineColorBlendStateCreateInfo color_blend_state_info = this->gen_color_blend_state(data, attachment_states);
     std::vector<VkDynamicState> dynamic_states = this->gen_dynamic_state_info(data);
-    VkRenderPass render_pass = this->gen_render_pass(data);
+    this->render_pass = this->gen_render_pass(data);
     std::vector<VkPipelineShaderStageCreateInfo> shader_stage_infos = this->load_shader_stage_infos(data);
     this->layout = this->gen_pipeline_layout(data);
 
@@ -113,11 +219,12 @@ void graphics_pipeline::initialise(vulkan_data& data, std::vector<VkPipelineShad
 
 void graphics_pipeline::terminate(vulkan_data& data)
 {
+    vkDestroyRenderPass(data.logical_device, this->render_pass, nullptr);
     vkDestroyPipeline(data.logical_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(data.logical_device, this->layout, nullptr);
 }
 
 VkPipeline graphics_pipeline::get_pipeline() const
 {
-
+    return this->pipeline;
 }

@@ -9,6 +9,7 @@ class graphics_pipeline
 private:
     VkPipeline pipeline;
     VkPipelineLayout layout;
+    VkRenderPass render_pass;
 
 protected:
     virtual VkPipelineVertexInputStateCreateInfo gen_vertex_input_info(vulkan_data& data) = 0;
