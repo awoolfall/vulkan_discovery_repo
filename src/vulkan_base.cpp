@@ -1,6 +1,14 @@
 #include "vulkan_base.h"
-#include <fstream>
+
 #include "platform.h"
+
+#include <fstream>
+
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
+
+static VmaAllocator* g_mem_allocator = nullptr;
 
 struct physical_device_indicies
 {
@@ -333,6 +341,25 @@ void create_swap_chain_image_views(vulkan_data* data)
     }
 }
 
+void initialise_memory_allocator(vulkan_data* data)
+{
+    if (g_mem_allocator != nullptr) return;
+
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.physicalDevice = data->physical_device;
+    allocatorInfo.device = data->logical_device;
+    
+    if (vmaCreateAllocator(&allocatorInfo, g_mem_allocator) != VK_SUCCESS) {
+        throw std::runtime_error("Unable to initialise VK memory allocator!");
+    }
+}
+
+void terminate_memory_allocator()
+{
+    vmaDestroyAllocator(*g_mem_allocator);
+    g_mem_allocator = nullptr;
+}
+
 void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
 {
     std::vector<const char*> required_extensions = {
@@ -347,10 +374,12 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     create_logical_device(data, required_extensions);
     create_swap_chain(data, width, height);
     create_swap_chain_image_views(data);
+    initialise_memory_allocator(data);
 }
 
 void terminate_vulkan(vulkan_data& data)
 {
+    terminate_memory_allocator();
     for (auto image_view : data.swap_chain_data.image_views) {
         vkDestroyImageView(data.logical_device, image_view, nullptr);
     }

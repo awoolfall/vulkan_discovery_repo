@@ -24,6 +24,7 @@ enum class shader_type {
     VERTEX, FRAGMENT, GEOMETRY, COMPUTE
 };
 
+
 void initialise_vulkan(vulkan_data* data, GLFWwindow* window);
 void terminate_vulkan(vulkan_data& data);
 
