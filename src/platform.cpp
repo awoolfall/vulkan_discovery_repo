@@ -75,3 +75,18 @@ std::string read_string_from_file(std::string pAbsolutePath)
     ifs.close();
     return return_string;
 }
+
+std::vector<char> read_data_from_binary_file(const char* abs_path)
+{
+    std::ifstream file(abs_path, std::ios::ate | std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("failed to open file!");
+    }
+
+    size_t file_size = (size_t)file.tellg();
+    std::vector<char> buffer(file_size);
+    file.seekg(0);
+    file.read(buffer.data(), file_size);
+    file.close();
+    return buffer;
+}

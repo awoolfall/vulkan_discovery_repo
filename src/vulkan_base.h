@@ -14,10 +14,18 @@ struct vulkan_data
     VkSwapchainKHR swap_chain;
     struct {
         std::vector<VkImage> images;
+        std::vector<VkImageView> image_views;
         VkFormat image_format;
         VkExtent2D extent;
     } swap_chain_data;
 };
 
+enum class shader_type {
+    VERTEX, FRAGMENT, GEOMETRY, COMPUTE
+};
+
 void initialise_vulkan(vulkan_data* data, GLFWwindow* window);
 void terminate_vulkan(vulkan_data& data);
+
+VkShaderModule create_shader_module_from_spirv(vulkan_data& vulkan, std::vector<char>& shader_data);
+VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, VkShaderModule module);

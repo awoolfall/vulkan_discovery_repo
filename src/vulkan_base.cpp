@@ -1,4 +1,6 @@
 #include "vulkan_base.h"
+#include <fstream>
+#include "platform.h"
 
 struct physical_device_indicies
 {
@@ -290,7 +292,7 @@ void create_swap_chain(vulkan_data* data, uint32_t width, uint32_t height)
     createInfo.presentMode = present_mode;
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
-
+    
     if (vkCreateSwapchainKHR(data->logical_device, &createInfo, nullptr, &data->swap_chain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
     }
@@ -302,6 +304,33 @@ void create_swap_chain(vulkan_data* data, uint32_t width, uint32_t height)
 
     data->swap_chain_data.extent = extent;
     data->swap_chain_data.image_format = surface_format.format;
+}
+
+void create_swap_chain_image_views(vulkan_data* data)
+{
+    data->swap_chain_data.image_views.resize(data->swap_chain_data.images.size());
+    for (size_t i = 0; i < data->swap_chain_data.image_views.size(); i++) {
+        VkImageViewCreateInfo create_info = {};
+        create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        create_info.image = data->swap_chain_data.images[i];
+        create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        create_info.format = data->swap_chain_data.image_format;
+
+        create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+        create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        create_info.subresourceRange.baseMipLevel = 0;
+        create_info.subresourceRange.levelCount = 1;
+        create_info.subresourceRange.baseArrayLayer = 0;
+        create_info.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(data->logical_device, &create_info, nullptr, &data->swap_chain_data.image_views[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create image views!");
+        }
+    }
 }
 
 void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
@@ -317,14 +346,51 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     pick_physical_device(data, required_extensions);
     create_logical_device(data, required_extensions);
     create_swap_chain(data, width, height);
+    create_swap_chain_image_views(data);
 }
 
 void terminate_vulkan(vulkan_data& data)
 {
+    for (auto image_view : data.swap_chain_data.image_views) {
+        vkDestroyImageView(data.logical_device, image_view, nullptr);
+    }
     vkDestroySwapchainKHR(data.logical_device, data.swap_chain, nullptr);
     vkDestroyDevice(data.logical_device, nullptr);
     vkDestroySurfaceKHR(data.instance, data.surface, nullptr);
     vkDestroyInstance(data.instance, nullptr);
 }
 
-/* https://vulkan-tutorial.com/Drawing_a_triangle/Presentation/Swap_chain#page_Querying-details-of-swap-chain-support - Querying details of swap chain support */
+VkShaderModule create_shader_module_from_spirv(vulkan_data& vulkan, std::vector<char>& shader_data)
+{
+    VkShaderModuleCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = shader_data.size();
+    create_info.pCode = reinterpret_cast<const uint32_t*> (shader_data.data());
+
+    VkShaderModule module;
+    if (vkCreateShaderModule(vulkan.logical_device, &create_info, nullptr, &module) != VK_SUCCESS) {
+        throw std::runtime_error("Unable to load shader module!");
+    }
+    return module;
+}
+
+VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, VkShaderModule module)
+{
+    VkShaderStageFlagBits stage_flag;
+    switch (type) {
+        case shader_type::VERTEX:    {stage_flag = VK_SHADER_STAGE_VERTEX_BIT;}     break;
+        case shader_type::FRAGMENT:  {stage_flag = VK_SHADER_STAGE_FRAGMENT_BIT;}   break;
+        case shader_type::GEOMETRY:  {stage_flag = VK_SHADER_STAGE_GEOMETRY_BIT;}   break;
+        case shader_type::COMPUTE:   {stage_flag = VK_SHADER_STAGE_COMPUTE_BIT;}    break;
+        default:                    throw std::runtime_error("What...");            break;
+    }
+    VkPipelineShaderStageCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    create_info.stage = stage_flag;
+    create_info.module = module;
+    create_info.pName = "main";
+
+    return create_info;
+}
+
+/* https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions */
