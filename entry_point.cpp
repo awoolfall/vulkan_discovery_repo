@@ -79,7 +79,7 @@ int main(int argc, char* argv)
         return EXIT_FAILURE;
     }
     basic_pipeline basic_p;
-    basic_p.initialise(vkdata);
+    basic_p.initialise(vkdata, vkdata.render_pass);
 
     glm::mat4 matrix;
     glm::vec4 vec;

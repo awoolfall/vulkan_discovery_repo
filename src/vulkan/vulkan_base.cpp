@@ -341,6 +341,64 @@ void create_swap_chain_image_views(vulkan_data* data)
     }
 }
 
+void create_render_pass(vulkan_data* data)
+{
+    // @TODO this will have to be updated in the future for depth passes, post processing etc.
+    VkAttachmentDescription colorAttachment = {};
+    colorAttachment.format = data->swap_chain_data.image_format;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef = {};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    
+    VkSubpassDescription subpass = {};  
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+
+    if (vkCreateRenderPass(data->logical_device, &renderPassInfo, nullptr, &data->render_pass) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
+}
+
+void create_frame_buffers(vulkan_data* data)
+{
+    // @FIX framebuffers and render passes, this will need to be generalised at some point probably
+    data->swap_chain_data.frame_buffers.resize(data->swap_chain_data.image_views.size());
+    for (size_t i = 0; i < data->swap_chain_data.image_views.size(); i++) {
+        VkImageView attachments[] = {
+            data->swap_chain_data.image_views[i]
+        };
+
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = data->render_pass;
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.width = data->swap_chain_data.extent.width;
+        framebufferInfo.height = data->swap_chain_data.extent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(data->logical_device, &framebufferInfo, nullptr, &data->swap_chain_data.frame_buffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
+}
+
 void initialise_memory_allocator(vulkan_data* data)
 {
     if (g_mem_allocator != nullptr) return;
@@ -376,12 +434,18 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     create_logical_device(data, required_extensions);
     create_swap_chain(data, width, height);
     create_swap_chain_image_views(data);
+    create_render_pass(data);
+    create_frame_buffers(data);
     initialise_memory_allocator(data);
 }
 
 void terminate_vulkan(vulkan_data& data)
 {
     terminate_memory_allocator();
+    for (auto framebuffer : data.swap_chain_data.frame_buffers) {
+        vkDestroyFramebuffer(data.logical_device, framebuffer, nullptr);
+    }
+    vkDestroyRenderPass(data.logical_device, data.render_pass, nullptr);
     for (auto image_view : data.swap_chain_data.image_views) {
         vkDestroyImageView(data.logical_device, image_view, nullptr);
     }

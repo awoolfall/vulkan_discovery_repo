@@ -21,11 +21,10 @@ protected:
     virtual VkPipelineColorBlendStateCreateInfo gen_color_blend_state(vulkan_data& data, std::vector<VkPipelineColorBlendAttachmentState>& attachment_states);
     virtual std::vector<VkDynamicState> gen_dynamic_state_info(vulkan_data& data);
     virtual VkPipelineLayout gen_pipeline_layout(vulkan_data& data);
-    virtual VkRenderPass gen_render_pass(vulkan_data& data);
     virtual std::vector<VkPipelineShaderStageCreateInfo> load_shader_stage_infos(vulkan_data& data);
 
 public:
-    void initialise(vulkan_data& data, std::vector<VkPipelineShaderStageCreateInfo> shader_stages = {});
+    void initialise(vulkan_data& data, VkRenderPass render_pass, std::vector<VkPipelineShaderStageCreateInfo> shader_stages = {});
     void terminate(vulkan_data& data);
     VkPipeline get_pipeline() const;
     

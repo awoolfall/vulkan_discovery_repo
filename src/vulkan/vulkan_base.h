@@ -12,9 +12,11 @@ struct vulkan_data
     VkQueue graphics_queue;
     VkQueue present_queue;
     VkSwapchainKHR swap_chain;
+    VkRenderPass render_pass;
     struct {
         std::vector<VkImage> images;
         std::vector<VkImageView> image_views;
+        std::vector<VkFramebuffer> frame_buffers;
         VkFormat image_format;
         VkExtent2D extent;
     } swap_chain_data;

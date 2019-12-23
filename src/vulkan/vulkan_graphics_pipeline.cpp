@@ -121,41 +121,6 @@ VkPipelineLayout graphics_pipeline::gen_pipeline_layout(vulkan_data& data)
     return pipelineLayout;
 }
 
-VkRenderPass graphics_pipeline::gen_render_pass(vulkan_data& data)
-{
-    VkAttachmentDescription colorAttachment = {};
-    colorAttachment.format = data.swap_chain_data.image_format;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference colorAttachmentRef = {};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    
-    VkSubpassDescription subpass = {};  
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-
-    VkRenderPassCreateInfo renderPassInfo = {};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-
-    VkRenderPass render_pass;
-    if (vkCreateRenderPass(data.logical_device, &renderPassInfo, nullptr, &render_pass) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create render pass!");
-    }
-    return render_pass;
-}
-
 std::vector<VkPipelineShaderStageCreateInfo> graphics_pipeline::load_shader_stage_infos(vulkan_data& data)
 {
     throw std::logic_error("Have not passed any shader stages and no default shader loading has been set!");
@@ -164,7 +129,7 @@ std::vector<VkPipelineShaderStageCreateInfo> graphics_pipeline::load_shader_stag
 }
 
 
-void graphics_pipeline::initialise(vulkan_data& data, std::vector<VkPipelineShaderStageCreateInfo> shader_stages)
+void graphics_pipeline::initialise(vulkan_data& data, VkRenderPass render_pass, std::vector<VkPipelineShaderStageCreateInfo> shader_stages)
 {
     VkPipelineVertexInputStateCreateInfo vertex_input_state_info = this->gen_vertex_input_info(data);
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = this->gen_input_assembly_info(data);
@@ -175,9 +140,9 @@ void graphics_pipeline::initialise(vulkan_data& data, std::vector<VkPipelineShad
     std::vector<VkPipelineColorBlendAttachmentState> attachment_states;
     VkPipelineColorBlendStateCreateInfo color_blend_state_info = this->gen_color_blend_state(data, attachment_states);
     std::vector<VkDynamicState> dynamic_states = this->gen_dynamic_state_info(data);
-    this->render_pass = this->gen_render_pass(data);
     std::vector<VkPipelineShaderStageCreateInfo> shader_stage_infos = this->load_shader_stage_infos(data);
     this->layout = this->gen_pipeline_layout(data);
+    this->render_pass = render_pass;
 
     VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
     dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -227,7 +192,6 @@ void graphics_pipeline::initialise(vulkan_data& data, std::vector<VkPipelineShad
 
 void graphics_pipeline::terminate(vulkan_data& data)
 {
-    vkDestroyRenderPass(data.logical_device, this->render_pass, nullptr);
     vkDestroyPipeline(data.logical_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(data.logical_device, this->layout, nullptr);
 }
