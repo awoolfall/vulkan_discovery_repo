@@ -15,6 +15,7 @@ add_subdirectory(vendor/glfw)
 
 file(GLOB DISCOVERY_src
     "src/*.cpp"
+    "src/*/*.cpp"
 )
 
 add_library(discovery_lib ${DISCOVERY_src})

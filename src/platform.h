@@ -10,4 +10,4 @@ std::string to_absolute_path(std::string pRelativePath);
 std::string read_string_from_file(std::string pAbsolutePath);
 
 // reads binary data from a given absolute file path
-std::vector<char> read_data_from_binary_file(const char* abs_path);
+std::vector<char> read_data_from_binary_file(std::string abs_path);

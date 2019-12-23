@@ -1,6 +1,6 @@
 #include "vulkan_base.h"
 
-#include "platform.h"
+#include "../platform.h"
 
 #include <fstream>
 
@@ -349,6 +349,7 @@ void initialise_memory_allocator(vulkan_data* data)
     allocatorInfo.physicalDevice = data->physical_device;
     allocatorInfo.device = data->logical_device;
     
+    g_mem_allocator = new VmaAllocator;
     if (vmaCreateAllocator(&allocatorInfo, g_mem_allocator) != VK_SUCCESS) {
         throw std::runtime_error("Unable to initialise VK memory allocator!");
     }
@@ -357,6 +358,7 @@ void initialise_memory_allocator(vulkan_data* data)
 void terminate_memory_allocator()
 {
     vmaDestroyAllocator(*g_mem_allocator);
+    delete g_mem_allocator;
     g_mem_allocator = nullptr;
 }
 

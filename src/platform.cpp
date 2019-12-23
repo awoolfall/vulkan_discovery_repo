@@ -76,9 +76,9 @@ std::string read_string_from_file(std::string pAbsolutePath)
     return return_string;
 }
 
-std::vector<char> read_data_from_binary_file(const char* abs_path)
+std::vector<char> read_data_from_binary_file(std::string abs_path)
 {
-    std::ifstream file(abs_path, std::ios::ate | std::ios::binary);
+    std::ifstream file(abs_path.c_str(), std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
         throw std::runtime_error("failed to open file!");
     }

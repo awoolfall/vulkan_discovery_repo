@@ -85,7 +85,7 @@ VkPipelineColorBlendStateCreateInfo graphics_pipeline::gen_color_blend_state(vul
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE;
     colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
-    colorBlending.attachmentCount = attachment_states.size();
+    colorBlending.attachmentCount = (uint32_t)attachment_states.size();
     colorBlending.pAttachments = attachment_states.data();
     colorBlending.blendConstants[0] = 0.0f; // Optional
     colorBlending.blendConstants[1] = 0.0f; // Optional
@@ -158,12 +158,13 @@ VkRenderPass graphics_pipeline::gen_render_pass(vulkan_data& data)
 
 std::vector<VkPipelineShaderStageCreateInfo> graphics_pipeline::load_shader_stage_infos(vulkan_data& data)
 {
+    throw std::logic_error("Have not passed any shader stages and no default shader loading has been set!");
     std::vector<VkPipelineShaderStageCreateInfo> stages;
     return stages;
 }
 
 
-void graphics_pipeline::initialise(vulkan_data& data, std::vector<VkPipelineShaderStageCreateInfo> shader_stages = {})
+void graphics_pipeline::initialise(vulkan_data& data, std::vector<VkPipelineShaderStageCreateInfo> shader_stages)
 {
     VkPipelineVertexInputStateCreateInfo vertex_input_state_info = this->gen_vertex_input_info(data);
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = this->gen_input_assembly_info(data);
@@ -180,19 +181,19 @@ void graphics_pipeline::initialise(vulkan_data& data, std::vector<VkPipelineShad
 
     VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
     dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state_info.dynamicStateCount = dynamic_states.size();
+    dynamic_state_info.dynamicStateCount = (uint32_t)dynamic_states.size();
     dynamic_state_info.pDynamicStates = dynamic_states.data();
 
     VkPipelineViewportStateCreateInfo viewportState = {};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewportState.viewportCount = viewports.size();
+    viewportState.viewportCount = (uint32_t)viewports.size();
     viewportState.pViewports = viewports.data();
-    viewportState.scissorCount = scissors.size();
+    viewportState.scissorCount = (uint32_t)scissors.size();
     viewportState.pScissors = scissors.data();
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = shader_stage_infos.size();
+    pipelineInfo.stageCount = (uint32_t)shader_stage_infos.size();
     pipelineInfo.pStages = shader_stage_infos.data();
     pipelineInfo.pVertexInputState = &vertex_input_state_info;
     pipelineInfo.pInputAssemblyState = &input_assembly_info;
@@ -214,6 +215,13 @@ void graphics_pipeline::initialise(vulkan_data& data, std::vector<VkPipelineShad
 
     if (vkCreateGraphicsPipelines(data.logical_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->pipeline) != VK_SUCCESS) {
         throw std::runtime_error("failed to create graphics pipeline!");
+    }
+
+    // destroy all generated shader modules
+    if (shader_stages.size() == 0) {
+        for (VkPipelineShaderStageCreateInfo stage : shader_stage_infos) {
+            vkDestroyShaderModule(data.logical_device, stage.module, nullptr);
+        }
     }
 }
 

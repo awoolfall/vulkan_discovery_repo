@@ -5,7 +5,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "vulkan_base.h"
+#include "src/vulkan/vulkan_base.h"
+#include "src/basic_pipeline.h"
 // #include "src/shader.h"
 #include "src/platform.h"
 #include "src/transform.h"
@@ -77,6 +78,8 @@ int main(int argc, char* argv)
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
+    basic_pipeline basic_p;
+    basic_p.initialise(vkdata);
 
     glm::mat4 matrix;
     glm::vec4 vec;
@@ -86,6 +89,7 @@ int main(int argc, char* argv)
         glfwPollEvents();
     }
 
+    basic_p.terminate(vkdata);
     terminate_vulkan(vkdata);
     glfwDestroyWindow(window);
     glfwTerminate();
