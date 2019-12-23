@@ -13,6 +13,7 @@ struct vulkan_data
     VkQueue present_queue;
     VkSwapchainKHR swap_chain;
     VkRenderPass render_pass;
+    VkCommandPool command_pool_graphics;
     struct {
         std::vector<VkImage> images;
         std::vector<VkImageView> image_views;

@@ -8,7 +8,7 @@
 #include "vk_mem_alloc.h"
 
 
-static VmaAllocator* g_mem_allocator = nullptr;
+VmaAllocator* g_mem_allocator = nullptr;
 
 struct physical_device_indicies
 {
@@ -399,6 +399,20 @@ void create_frame_buffers(vulkan_data* data)
     }
 }
 
+void create_command_pools(vulkan_data* data)
+{
+    auto indicies = get_device_indicies(data->physical_device, data->surface);
+
+    VkCommandPoolCreateInfo poolInfo = {};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex = indicies.graphics_queue_index;
+    poolInfo.flags = 0; // Optional
+
+    if (vkCreateCommandPool(data->logical_device, &poolInfo, nullptr, &data->command_pool_graphics) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create command pool!");
+    }
+}
+
 void initialise_memory_allocator(vulkan_data* data)
 {
     if (g_mem_allocator != nullptr) return;
@@ -436,12 +450,14 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     create_swap_chain_image_views(data);
     create_render_pass(data);
     create_frame_buffers(data);
+    create_command_pools(data);
     initialise_memory_allocator(data);
 }
 
 void terminate_vulkan(vulkan_data& data)
 {
     terminate_memory_allocator();
+    vkDestroyCommandPool(data.logical_device, data.command_pool_graphics, nullptr);
     for (auto framebuffer : data.swap_chain_data.frame_buffers) {
         vkDestroyFramebuffer(data.logical_device, framebuffer, nullptr);
     }
@@ -488,4 +504,4 @@ VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, V
     return create_info;
 }
 
-/* https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions */
+/* https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers - how do we get multiple objects rendering? */
