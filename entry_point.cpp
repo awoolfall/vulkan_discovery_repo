@@ -7,6 +7,7 @@
 
 #include "src/vulkan/vulkan_base.h"
 #include "src/basic_pipeline.h"
+#include "src/basic_command_buffer.h"
 // #include "src/shader.h"
 #include "src/platform.h"
 #include "src/transform.h"
@@ -81,6 +82,10 @@ int main(int argc, char* argv)
     basic_pipeline basic_p;
     basic_p.initialise(vkdata, vkdata.render_pass);
 
+    triangle_cmd buf;
+    buf.pipeline = basic_p.get_pipeline();
+    buf.initialise(vkdata);
+
     glm::mat4 matrix;
     glm::vec4 vec;
     auto test = matrix * vec;
@@ -89,6 +94,7 @@ int main(int argc, char* argv)
         glfwPollEvents();
     }
 
+    buf.terminate(vkdata);
     basic_p.terminate(vkdata);
     terminate_vulkan(vkdata);
     glfwDestroyWindow(window);

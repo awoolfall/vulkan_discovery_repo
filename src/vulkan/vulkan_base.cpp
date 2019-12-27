@@ -446,17 +446,17 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     create_surface(data, window);
     pick_physical_device(data, required_extensions);
     create_logical_device(data, required_extensions);
+    initialise_memory_allocator(data);
+
     create_swap_chain(data, width, height);
     create_swap_chain_image_views(data);
     create_render_pass(data);
     create_frame_buffers(data);
     create_command_pools(data);
-    initialise_memory_allocator(data);
 }
 
 void terminate_vulkan(vulkan_data& data)
 {
-    terminate_memory_allocator();
     vkDestroyCommandPool(data.logical_device, data.command_pool_graphics, nullptr);
     for (auto framebuffer : data.swap_chain_data.frame_buffers) {
         vkDestroyFramebuffer(data.logical_device, framebuffer, nullptr);
@@ -466,6 +466,8 @@ void terminate_vulkan(vulkan_data& data)
         vkDestroyImageView(data.logical_device, image_view, nullptr);
     }
     vkDestroySwapchainKHR(data.logical_device, data.swap_chain, nullptr);
+    
+    terminate_memory_allocator();
     vkDestroyDevice(data.logical_device, nullptr);
     vkDestroySurfaceKHR(data.instance, data.surface, nullptr);
     vkDestroyInstance(data.instance, nullptr);

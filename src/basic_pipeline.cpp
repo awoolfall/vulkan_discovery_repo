@@ -34,3 +34,11 @@ std::vector<VkPipelineShaderStageCreateInfo> basic_pipeline::load_shader_stage_i
 
     return {vert_info, frag_info};
 }
+
+std::vector<VkDynamicState> basic_pipeline::gen_dynamic_state_info(vulkan_data& data)
+{
+    std::vector<VkDynamicState> dynamicStates = {
+        VK_DYNAMIC_STATE_LINE_WIDTH
+    };
+    return dynamicStates;
+}
