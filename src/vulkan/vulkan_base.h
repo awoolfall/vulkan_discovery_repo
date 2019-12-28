@@ -21,6 +21,8 @@ struct vulkan_data
         VkFormat image_format;
         VkExtent2D extent;
     } swap_chain_data;
+    VkSemaphore image_available_sem;
+    VkSemaphore render_finished_sem;
 };
 
 enum class shader_type {
@@ -33,3 +35,4 @@ void terminate_vulkan(vulkan_data& data);
 
 VkShaderModule create_shader_module_from_spirv(vulkan_data& vulkan, std::vector<char>& shader_data);
 VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, VkShaderModule module);
+void submit_command_buffers_graphics(vulkan_data& data, std::vector<VkCommandBuffer> command_buffers);

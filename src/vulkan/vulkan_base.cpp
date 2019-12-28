@@ -434,6 +434,15 @@ void terminate_memory_allocator()
     g_mem_allocator = nullptr;
 }
 
+void create_semaphore(vulkan_data* data, VkSemaphore& semaphore)
+{
+    VkSemaphoreCreateInfo semaphoreInfo = {};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    if (vkCreateSemaphore(data->logical_device, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create semaphores!");
+    }
+}
+
 void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
 {
     std::vector<const char*> required_extensions = {
@@ -447,6 +456,8 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     pick_physical_device(data, required_extensions);
     create_logical_device(data, required_extensions);
     initialise_memory_allocator(data);
+    create_semaphore(data, data->image_available_sem);
+    create_semaphore(data, data->render_finished_sem);
 
     create_swap_chain(data, width, height);
     create_swap_chain_image_views(data);
@@ -457,6 +468,8 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
 
 void terminate_vulkan(vulkan_data& data)
 {
+    vkDeviceWaitIdle(data.logical_device);
+
     vkDestroyCommandPool(data.logical_device, data.command_pool_graphics, nullptr);
     for (auto framebuffer : data.swap_chain_data.frame_buffers) {
         vkDestroyFramebuffer(data.logical_device, framebuffer, nullptr);
@@ -467,6 +480,8 @@ void terminate_vulkan(vulkan_data& data)
     }
     vkDestroySwapchainKHR(data.logical_device, data.swap_chain, nullptr);
     
+    vkDestroySemaphore(data.logical_device, data.image_available_sem, nullptr);
+    vkDestroySemaphore(data.logical_device, data.render_finished_sem, nullptr);
     terminate_memory_allocator();
     vkDestroyDevice(data.logical_device, nullptr);
     vkDestroySurfaceKHR(data.instance, data.surface, nullptr);
@@ -504,6 +519,27 @@ VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, V
     create_info.pName = "main";
 
     return create_info;
+}
+
+void submit_command_buffers_graphics(vulkan_data& data, std::vector<VkCommandBuffer> command_buffers)
+{
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[] = {data.image_available_sem};
+    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = command_buffers.size();
+    submitInfo.pCommandBuffers = command_buffers.data();
+    VkSemaphore signalSemaphores[] = {data.render_finished_sem};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    if (vkQueueSubmit(data.graphics_queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit draw command buffer!");
+    }
 }
 
 /* https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers - how do we get multiple objects rendering? */
