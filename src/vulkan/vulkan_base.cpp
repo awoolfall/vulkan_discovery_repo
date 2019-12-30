@@ -363,12 +363,23 @@ void create_render_pass(vulkan_data* data)
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
 
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+
     VkRenderPassCreateInfo renderPassInfo = {};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount = 1;
     renderPassInfo.pAttachments = &colorAttachment;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
 
     if (vkCreateRenderPass(data->logical_device, &renderPassInfo, nullptr, &data->render_pass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
@@ -434,12 +445,27 @@ void terminate_memory_allocator()
     g_mem_allocator = nullptr;
 }
 
-void create_semaphore(vulkan_data* data, VkSemaphore& semaphore)
+void create_semaphores(vulkan_data* data, std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT>& semaphores)
 {
     VkSemaphoreCreateInfo semaphoreInfo = {};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    if (vkCreateSemaphore(data->logical_device, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create semaphores!");
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if (vkCreateSemaphore(data->logical_device, &semaphoreInfo, nullptr, &semaphores[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create semaphores!");
+        }
+    }
+}
+
+void create_fences(vulkan_data* data, std::array<VkFence, MAX_FRAMES_IN_FLIGHT>& fences)
+{
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if (vkCreateFence(data->logical_device, &fenceInfo, nullptr, &fences[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create semaphores!");
+        }
     }
 }
 
@@ -456,8 +482,9 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     pick_physical_device(data, required_extensions);
     create_logical_device(data, required_extensions);
     initialise_memory_allocator(data);
-    create_semaphore(data, data->image_available_sem);
-    create_semaphore(data, data->render_finished_sem);
+    create_semaphores(data, data->image_available_sems);
+    create_semaphores(data, data->render_finished_sems);
+    create_fences(data, data->in_flight_fences);
 
     create_swap_chain(data, width, height);
     create_swap_chain_image_views(data);
@@ -480,8 +507,11 @@ void terminate_vulkan(vulkan_data& data)
     }
     vkDestroySwapchainKHR(data.logical_device, data.swap_chain, nullptr);
     
-    vkDestroySemaphore(data.logical_device, data.image_available_sem, nullptr);
-    vkDestroySemaphore(data.logical_device, data.render_finished_sem, nullptr);
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroySemaphore(data.logical_device, data.image_available_sems[i], nullptr);
+        vkDestroySemaphore(data.logical_device, data.render_finished_sems[i], nullptr);
+        vkDestroyFence(data.logical_device, data.in_flight_fences[i], nullptr);
+    }
     terminate_memory_allocator();
     vkDestroyDevice(data.logical_device, nullptr);
     vkDestroySurfaceKHR(data.instance, data.surface, nullptr);
@@ -523,23 +553,59 @@ VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, V
 
 void submit_command_buffers_graphics(vulkan_data& data, std::vector<VkCommandBuffer> command_buffers)
 {
+    vkWaitForFences(data.logical_device, 1, &data.in_flight_fences[data.current_frame], VK_TRUE, UINT64_MAX);
+
+    uint32_t imageIndex;
+    if (data.image_index < 0) {
+        vkAcquireNextImageKHR(data.logical_device, data.swap_chain, UINT64_MAX, data.image_available_sems[data.current_frame], VK_NULL_HANDLE, &imageIndex);
+        data.image_index = imageIndex;
+    } else {
+        imageIndex = (uint32_t)data.image_index;
+    }
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = {data.image_available_sem};
+    VkSemaphore waitSemaphores[] = {data.image_available_sems[data.current_frame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
-    submitInfo.commandBufferCount = command_buffers.size();
-    submitInfo.pCommandBuffers = command_buffers.data();
-    VkSemaphore signalSemaphores[] = {data.render_finished_sem};
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &command_buffers[imageIndex];
+    VkSemaphore signalSemaphores[] = {data.render_finished_sems[data.current_frame]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(data.graphics_queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+    vkResetFences(data.logical_device, 1, &data.in_flight_fences[data.current_frame]);
+    if (vkQueueSubmit(data.graphics_queue, 1, &submitInfo, data.in_flight_fences[data.current_frame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
+}
+
+void present_frame(vulkan_data& data)
+{
+    VkSemaphore signalSemaphores[] = {data.render_finished_sems[data.current_frame]};
+    VkSwapchainKHR swapChains[] = {data.swap_chain};
+    uint32_t imageIndex;
+    if (data.image_index < 0) {
+        vkAcquireNextImageKHR(data.logical_device, data.swap_chain, UINT64_MAX, data.image_available_sems[data.current_frame], VK_NULL_HANDLE, &imageIndex);
+        data.image_index = imageIndex;
+    } else {
+        imageIndex = (uint32_t)data.image_index;
+    }
+
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.swapchainCount = 1; 
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pResults = nullptr; // Optional
+
+    vkQueuePresentKHR(data.present_queue, &presentInfo);
+    data.current_frame = ((data.current_frame + 1) % MAX_FRAMES_IN_FLIGHT);
+    data.image_index = -1;
 }
 
 /* https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers - how do we get multiple objects rendering? */

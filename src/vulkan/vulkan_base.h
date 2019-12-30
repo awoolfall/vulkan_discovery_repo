@@ -2,7 +2,9 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <array>
 
+#define MAX_FRAMES_IN_FLIGHT 2
 struct vulkan_data
 {
     VkInstance instance;
@@ -21,8 +23,11 @@ struct vulkan_data
         VkFormat image_format;
         VkExtent2D extent;
     } swap_chain_data;
-    VkSemaphore image_available_sem;
-    VkSemaphore render_finished_sem;
+    std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> image_available_sems;
+    std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> render_finished_sems;
+    std::array<VkFence, MAX_FRAMES_IN_FLIGHT> in_flight_fences;
+    int32_t image_index = -1;
+    uint32_t current_frame = 0;
 };
 
 enum class shader_type {
@@ -36,3 +41,4 @@ void terminate_vulkan(vulkan_data& data);
 VkShaderModule create_shader_module_from_spirv(vulkan_data& vulkan, std::vector<char>& shader_data);
 VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, VkShaderModule module);
 void submit_command_buffers_graphics(vulkan_data& data, std::vector<VkCommandBuffer> command_buffers);
+void present_frame(vulkan_data& data);

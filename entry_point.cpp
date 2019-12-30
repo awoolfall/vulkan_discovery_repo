@@ -92,6 +92,8 @@ int main(int argc, char* argv)
 
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+        submit_command_buffers_graphics(vkdata, buf.cmd_buffers());
+        present_frame(vkdata);
     }
 
     buf.terminate(vkdata);
