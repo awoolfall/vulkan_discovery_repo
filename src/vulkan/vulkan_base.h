@@ -4,10 +4,14 @@
 #include <vector>
 #include <array>
 
+class graphics_command_buffer;
+class graphics_pipeline;
+
 #define MAX_FRAMES_IN_FLIGHT 2
 struct vulkan_data
 {
-    VkInstance instance;
+    GLFWwindow* glfw_window;
+    VkInstance instance = nullptr;
     VkSurfaceKHR surface;
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
     VkDevice logical_device = VK_NULL_HANDLE;
@@ -28,6 +32,9 @@ struct vulkan_data
     std::array<VkFence, MAX_FRAMES_IN_FLIGHT> in_flight_fences;
     int32_t image_index = -1;
     uint32_t current_frame = 0;
+    std::vector<graphics_command_buffer*> registered_command_buffers;
+    std::vector<graphics_pipeline*> registered_pipelines;
+
 };
 
 enum class shader_type {
@@ -37,8 +44,14 @@ enum class shader_type {
 
 void initialise_vulkan(vulkan_data* data, GLFWwindow* window);
 void terminate_vulkan(vulkan_data& data);
+bool is_vulkan_initialised(vulkan_data& data);
 
 VkShaderModule create_shader_module_from_spirv(vulkan_data& vulkan, std::vector<char>& shader_data);
 VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, VkShaderModule module);
 void submit_command_buffers_graphics(vulkan_data& data, std::vector<VkCommandBuffer> command_buffers);
 void present_frame(vulkan_data& data);
+
+void register_command_buffer(vulkan_data& data, graphics_command_buffer* buffer);
+void unregister_command_buffer(vulkan_data& data, graphics_command_buffer* buffer);
+void register_pipeline(vulkan_data& data, graphics_pipeline* pipeline);
+void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline);

@@ -7,9 +7,9 @@
 class graphics_pipeline
 {
 private:
-    VkPipeline pipeline;
-    VkPipelineLayout layout;
     VkRenderPass render_pass;
+    std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
+    void clear_shader_stages(vulkan_data& data);
 
 protected:
     virtual VkPipelineVertexInputStateCreateInfo gen_vertex_input_info(vulkan_data& data) = 0;
@@ -24,7 +24,10 @@ protected:
     virtual std::vector<VkPipelineShaderStageCreateInfo> load_shader_stage_infos(vulkan_data& data);
 
 public:
-    void initialise(vulkan_data& data, VkRenderPass render_pass, std::vector<VkPipelineShaderStageCreateInfo> shader_stages = {});
+    VkPipeline pipeline;
+    VkPipelineLayout layout;
+
+    void initialise(vulkan_data& data, VkRenderPass render_pass);
     void terminate(vulkan_data& data);
     VkPipeline get_pipeline() const;
     

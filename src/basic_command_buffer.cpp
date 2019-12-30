@@ -13,7 +13,7 @@ void triangle_cmd::fill_command_buffer(vulkan_data& data, VkCommandBuffer& buffe
     renderPassInfo.pClearValues = &clearColor;
 
     vkCmdBeginRenderPass(buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
+    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *this->pipeline);
     vkCmdDraw(buffer, 3, 1, 0, 0);
     vkCmdEndRenderPass(buffer);
 }

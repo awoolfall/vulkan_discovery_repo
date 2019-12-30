@@ -1,4 +1,6 @@
+#pragma once
 #include "vulkan_base.h"
+#include <vulkan/vulkan.h>
 
 class graphics_command_buffer
 {

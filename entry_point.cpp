@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "src/vulkan/vulkan_base.h"
+#include "src/vulkan/vulkan_graphics.h"
 #include "src/basic_pipeline.h"
 #include "src/basic_command_buffer.h"
 // #include "src/shader.h"
@@ -83,7 +83,7 @@ int main(int argc, char* argv)
     basic_p.initialise(vkdata, vkdata.render_pass);
 
     triangle_cmd buf;
-    buf.pipeline = basic_p.get_pipeline();
+    buf.pipeline = &basic_p.pipeline;
     buf.initialise(vkdata);
 
     glm::mat4 matrix;

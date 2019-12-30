@@ -1,4 +1,6 @@
 #include "vulkan_base.h"
+#include "vulkan_command_buffer.h"
+#include "vulkan_graphics_pipeline.h"
 
 #include "../platform.h"
 
@@ -417,7 +419,7 @@ void create_command_pools(vulkan_data* data)
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.queueFamilyIndex = indicies.graphics_queue_index;
-    poolInfo.flags = 0; // Optional
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // Optional
 
     if (vkCreateCommandPool(data->logical_device, &poolInfo, nullptr, &data->command_pool_graphics) != VK_SUCCESS) {
         throw std::runtime_error("failed to create command pool!");
@@ -469,8 +471,40 @@ void create_fences(vulkan_data* data, std::array<VkFence, MAX_FRAMES_IN_FLIGHT>&
     }
 }
 
+void cleanup_swap_chain(vulkan_data* data)
+{
+    for (auto framebuffer : data->swap_chain_data.frame_buffers) {
+        vkDestroyFramebuffer(data->logical_device, framebuffer, nullptr);
+    }
+    vkDestroyRenderPass(data->logical_device, data->render_pass, nullptr);
+    for (auto image_view : data->swap_chain_data.image_views) {
+        vkDestroyImageView(data->logical_device, image_view, nullptr);
+    }
+    vkDestroySwapchainKHR(data->logical_device, data->swap_chain, nullptr);
+}
+
+void recreate_swap_chain(vulkan_data* data, int window_width, int window_height)
+{
+    vkDeviceWaitIdle(data->logical_device);
+    cleanup_swap_chain(data);
+
+    create_swap_chain(data, window_width, window_height);
+    create_swap_chain_image_views(data);
+    create_render_pass(data);
+    for (size_t i = 0; i < data->registered_pipelines.size(); i++) {
+        auto p = data->registered_pipelines[i];
+        p->terminate(*data);
+        p->initialise(*data, data->render_pass);
+    }
+    create_frame_buffers(data);
+    for (size_t i = 0; i < data->registered_command_buffers.size(); i++) {
+        data->registered_command_buffers[i]->recreate(*data);
+    }
+}
+
 void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
 {
+    data->glfw_window = window;
     std::vector<const char*> required_extensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
@@ -485,28 +519,26 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     create_semaphores(data, data->image_available_sems);
     create_semaphores(data, data->render_finished_sems);
     create_fences(data, data->in_flight_fences);
+    create_command_pools(data);
 
     create_swap_chain(data, width, height);
     create_swap_chain_image_views(data);
     create_render_pass(data);
+    for (size_t i = 0; i < data->registered_pipelines.size(); i++) {
+        data->registered_pipelines[i]->initialise(*data, data->render_pass);
+    }
     create_frame_buffers(data);
-    create_command_pools(data);
+    for (size_t i = 0; i < data->registered_command_buffers.size(); i++) {
+        data->registered_command_buffers[i]->recreate(*data);
+    }
 }
 
 void terminate_vulkan(vulkan_data& data)
 {
     vkDeviceWaitIdle(data.logical_device);
 
+    cleanup_swap_chain(&data);
     vkDestroyCommandPool(data.logical_device, data.command_pool_graphics, nullptr);
-    for (auto framebuffer : data.swap_chain_data.frame_buffers) {
-        vkDestroyFramebuffer(data.logical_device, framebuffer, nullptr);
-    }
-    vkDestroyRenderPass(data.logical_device, data.render_pass, nullptr);
-    for (auto image_view : data.swap_chain_data.image_views) {
-        vkDestroyImageView(data.logical_device, image_view, nullptr);
-    }
-    vkDestroySwapchainKHR(data.logical_device, data.swap_chain, nullptr);
-    
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(data.logical_device, data.image_available_sems[i], nullptr);
         vkDestroySemaphore(data.logical_device, data.render_finished_sems[i], nullptr);
@@ -516,6 +548,13 @@ void terminate_vulkan(vulkan_data& data)
     vkDestroyDevice(data.logical_device, nullptr);
     vkDestroySurfaceKHR(data.instance, data.surface, nullptr);
     vkDestroyInstance(data.instance, nullptr);
+    data.instance = nullptr;
+    data.glfw_window = nullptr;
+}
+
+bool is_vulkan_initialised(vulkan_data& data)
+{
+    return (data.instance != nullptr);
 }
 
 VkShaderModule create_shader_module_from_spirv(vulkan_data& vulkan, std::vector<char>& shader_data)
@@ -603,9 +642,59 @@ void present_frame(vulkan_data& data)
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr; // Optional
 
-    vkQueuePresentKHR(data.present_queue, &presentInfo);
+    auto result = vkQueuePresentKHR(data.present_queue, &presentInfo);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        int width, height;
+        glfwGetWindowSize(data.glfw_window, &width, &height);
+        recreate_swap_chain(&data, width, height);
+    } else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
     data.current_frame = ((data.current_frame + 1) % MAX_FRAMES_IN_FLIGHT);
     data.image_index = -1;
 }
+
+template <typename T>
+bool vector_contains(T value, std::vector<T>& vector, size_t* index)
+{
+    for (size_t i = 0; i < vector.size(); i++) {
+        if (vector[i] == value) {
+            *index = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+void register_command_buffer(vulkan_data& data, graphics_command_buffer* buffer)
+{
+    if (!vector_contains<graphics_command_buffer*>(buffer, data.registered_command_buffers, nullptr)) {
+        data.registered_command_buffers.push_back(buffer);
+    }
+}
+
+void unregister_command_buffer(vulkan_data& data, graphics_command_buffer* buffer)
+{
+    size_t index;
+    if (vector_contains<graphics_command_buffer*>(buffer, data.registered_command_buffers, &index)) {
+        data.registered_command_buffers.erase(data.registered_command_buffers.begin() + index);
+    }
+}
+
+void register_pipeline(vulkan_data& data, graphics_pipeline* pipeline)
+{
+    if (!vector_contains<graphics_pipeline*>(pipeline, data.registered_pipelines, nullptr)) {
+        data.registered_pipelines.push_back(pipeline);
+    }
+}
+
+void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline)
+{
+    size_t index;
+    if (vector_contains<graphics_pipeline*>(pipeline, data.registered_pipelines, &index)) {
+        data.registered_pipelines.erase(data.registered_pipelines.begin() + index);
+    }
+}
+
 
 /* https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers - how do we get multiple objects rendering? */
