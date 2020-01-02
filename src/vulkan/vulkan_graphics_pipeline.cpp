@@ -1,4 +1,5 @@
 #include "vulkan_graphics_pipeline.h"
+#include "../platform.h"
 
 VkPipelineInputAssemblyStateCreateInfo graphics_pipeline::gen_input_assembly_info(vulkan_data& data)
 {
@@ -130,7 +131,15 @@ std::vector<VkPipelineShaderStageCreateInfo> graphics_pipeline::load_shader_stag
 
 void graphics_pipeline::initialise(vulkan_data& data, VkRenderPass render_pass)
 {
-    VkPipelineVertexInputStateCreateInfo vertex_input_state_info = this->gen_vertex_input_info(data);
+    std::vector<VkVertexInputBindingDescription> binding_descriptions; std::vector<VkVertexInputAttributeDescription> attrib_descriptions;
+    this->gen_vertex_input_info(data, &binding_descriptions, &attrib_descriptions);
+    VkPipelineVertexInputStateCreateInfo vertex_input_state_info = {};
+    vertex_input_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertex_input_state_info.vertexBindingDescriptionCount = (uint32_t)binding_descriptions.size();
+    vertex_input_state_info.pVertexBindingDescriptions = binding_descriptions.data();
+    vertex_input_state_info.vertexAttributeDescriptionCount = (uint32_t)attrib_descriptions.size();
+    vertex_input_state_info.pVertexAttributeDescriptions = attrib_descriptions.data();
+
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = this->gen_input_assembly_info(data);
     std::vector<VkViewport> viewports = this->gen_viewport(data);
     std::vector<VkRect2D> scissors = this->gen_scissor(data);
@@ -207,4 +216,12 @@ void graphics_pipeline::terminate(vulkan_data& data)
 VkPipeline graphics_pipeline::get_pipeline() const
 {
     return this->pipeline;
+}
+
+VkPipelineShaderStageCreateInfo gen_shader_stage_info_from_spirv(vulkan_data& data, std::string& abs_path, shader_type type, const char* entry_point)
+{
+    auto vert_data = read_data_from_binary_file(abs_path);
+    auto module = create_shader_module_from_spirv(data, vert_data);
+    auto info = gen_shader_stage_create_info(module, type, entry_point);
+    return info;
 }

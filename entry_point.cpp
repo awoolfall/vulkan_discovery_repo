@@ -82,9 +82,19 @@ int main(int argc, char* argv)
     basic_pipeline basic_p;
     basic_p.initialise(vkdata, vkdata.render_pass);
 
-    triangle_cmd buf;
-    buf.pipeline = &basic_p.pipeline;
-    buf.initialise(vkdata);
+    std::vector<vertex> vert_data = {
+        {{0.0f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.9f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}}
+    };
+
+    vertex_buffer<vertex> buffer;
+    buffer.initialise(vkdata, vert_data);
+
+    triangle_cmd cmd;
+    cmd.pipeline = &basic_p.pipeline;
+    cmd.vert_buffer = &buffer.buffer;
+    cmd.initialise(vkdata);
 
     glm::mat4 matrix;
     glm::vec4 vec;
@@ -92,11 +102,12 @@ int main(int argc, char* argv)
 
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-        submit_command_buffers_graphics(vkdata, buf.cmd_buffers());
+        submit_command_buffers_graphics(vkdata, cmd.cmd_buffers());
         present_frame(vkdata);
     }
 
-    buf.terminate(vkdata);
+    buffer.terminate(vkdata);
+    cmd.terminate(vkdata);
     basic_p.terminate(vkdata);
     terminate_vulkan(vkdata);
     glfwDestroyWindow(window);

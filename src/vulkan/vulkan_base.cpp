@@ -10,8 +10,6 @@
 #include "vk_mem_alloc.h"
 
 
-VmaAllocator* g_mem_allocator = nullptr;
-
 struct physical_device_indicies
 {
     bool has_graphics_queue = false;
@@ -428,23 +426,18 @@ void create_command_pools(vulkan_data* data)
 
 void initialise_memory_allocator(vulkan_data* data)
 {
-    if (g_mem_allocator != nullptr) return;
-
     VmaAllocatorCreateInfo allocatorInfo = {};
     allocatorInfo.physicalDevice = data->physical_device;
     allocatorInfo.device = data->logical_device;
     
-    g_mem_allocator = new VmaAllocator;
-    if (vmaCreateAllocator(&allocatorInfo, g_mem_allocator) != VK_SUCCESS) {
+    if (vmaCreateAllocator(&allocatorInfo, &data->mem_allocator) != VK_SUCCESS) {
         throw std::runtime_error("Unable to initialise VK memory allocator!");
     }
 }
 
-void terminate_memory_allocator()
+void terminate_memory_allocator(vulkan_data& data)
 {
-    vmaDestroyAllocator(*g_mem_allocator);
-    delete g_mem_allocator;
-    g_mem_allocator = nullptr;
+    vmaDestroyAllocator(data.mem_allocator);
 }
 
 void create_semaphores(vulkan_data* data, std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT>& semaphores)
@@ -483,12 +476,15 @@ void cleanup_swap_chain(vulkan_data* data)
     vkDestroySwapchainKHR(data->logical_device, data->swap_chain, nullptr);
 }
 
-void recreate_swap_chain(vulkan_data* data, int window_width, int window_height)
+void recreate_swap_chain(vulkan_data* data, GLFWwindow* window)
 {
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
     vkDeviceWaitIdle(data->logical_device);
     cleanup_swap_chain(data);
-
-    create_swap_chain(data, window_width, window_height);
+    
+    create_swap_chain(data, width, height);
     create_swap_chain_image_views(data);
     create_render_pass(data);
     for (size_t i = 0; i < data->registered_pipelines.size(); i++) {
@@ -544,7 +540,7 @@ void terminate_vulkan(vulkan_data& data)
         vkDestroySemaphore(data.logical_device, data.render_finished_sems[i], nullptr);
         vkDestroyFence(data.logical_device, data.in_flight_fences[i], nullptr);
     }
-    terminate_memory_allocator();
+    terminate_memory_allocator(data);
     vkDestroyDevice(data.logical_device, nullptr);
     vkDestroySurfaceKHR(data.instance, data.surface, nullptr);
     vkDestroyInstance(data.instance, nullptr);
@@ -571,7 +567,7 @@ VkShaderModule create_shader_module_from_spirv(vulkan_data& vulkan, std::vector<
     return module;
 }
 
-VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, VkShaderModule module)
+VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(VkShaderModule module, shader_type type, const char* entry_point)
 {
     VkShaderStageFlagBits stage_flag;
     switch (type) {
@@ -585,7 +581,7 @@ VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, V
     create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     create_info.stage = stage_flag;
     create_info.module = module;
-    create_info.pName = "main";
+    create_info.pName = entry_point;
 
     return create_info;
 }
@@ -644,9 +640,7 @@ void present_frame(vulkan_data& data)
 
     auto result = vkQueuePresentKHR(data.present_queue, &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        int width, height;
-        glfwGetWindowSize(data.glfw_window, &width, &height);
-        recreate_swap_chain(&data, width, height);
+        recreate_swap_chain(&data, data.glfw_window);
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swap chain image!");
     }

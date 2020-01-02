@@ -1,3 +1,5 @@
+#pragma once
+
 #include "vulkan/vulkan_command_buffer.h"
 
 class triangle_cmd : public graphics_command_buffer
@@ -7,4 +9,5 @@ protected:
 
 public:
     VkPipeline* pipeline;
+    VkBuffer* vert_buffer;
 };

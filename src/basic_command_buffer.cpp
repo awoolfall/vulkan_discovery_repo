@@ -14,6 +14,11 @@ void triangle_cmd::fill_command_buffer(vulkan_data& data, VkCommandBuffer& buffe
 
     vkCmdBeginRenderPass(buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *this->pipeline);
+
+    VkBuffer vert_buffers[] = {*this->vert_buffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(buffer, 0, 1, vert_buffers, offsets);
+    
     vkCmdDraw(buffer, 3, 1, 0, 0);
     vkCmdEndRenderPass(buffer);
 }

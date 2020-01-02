@@ -3,6 +3,7 @@
 #include "vulkan_base.h"
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <tuple>
 
 class graphics_pipeline
 {
@@ -12,7 +13,7 @@ private:
     void clear_shader_stages(vulkan_data& data);
 
 protected:
-    virtual VkPipelineVertexInputStateCreateInfo gen_vertex_input_info(vulkan_data& data) = 0;
+    virtual void gen_vertex_input_info(vulkan_data& data, std::vector<VkVertexInputBindingDescription>* binding_descriptions, std::vector<VkVertexInputAttributeDescription>* attrib_descriptions) = 0;
     virtual VkPipelineInputAssemblyStateCreateInfo gen_input_assembly_info(vulkan_data& data);
     virtual std::vector<VkViewport> gen_viewport(vulkan_data& data);
     virtual std::vector<VkRect2D> gen_scissor(vulkan_data& data);
@@ -32,3 +33,27 @@ public:
     VkPipeline get_pipeline() const;
     
 };
+
+VkPipelineShaderStageCreateInfo gen_shader_stage_info_from_spirv(vulkan_data& data, std::string& abs_path, shader_type type, const char* entry_point = "main");
+
+template <typename T>
+VkVertexInputBindingDescription get_binding_description(size_t binding)
+{
+    VkVertexInputBindingDescription bindingDescription = {};
+    bindingDescription.binding = (uint32_t)binding;
+    bindingDescription.stride = sizeof(T);
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    return bindingDescription;
+}
+
+template <typename T>
+VkVertexInputBindingDescription get_binding_description_instanced(size_t binding)
+{
+    VkVertexInputBindingDescription bindingDescription = {};
+    bindingDescription.binding = (uint32_t)binding;
+    bindingDescription.stride = sizeof(T);
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+    return bindingDescription;
+}
+
+#define VERTEX_INPUT_DESCRIPTIONS(type) static VkVertexInputBindingDescription get_binding_description(size_t binding){ return ::get_binding_description<type>(binding); } static VkVertexInputBindingDescription get_binding_description_instanced(size_t binding){ return ::get_binding_description_instanced<type>(binding); } static std::vector<VkVertexInputAttributeDescription> get_attribute_descriptions();

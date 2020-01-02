@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <array>
+#include "vk_mem_alloc.h"
 
 class graphics_command_buffer;
 class graphics_pipeline;
@@ -34,7 +35,7 @@ struct vulkan_data
     uint32_t current_frame = 0;
     std::vector<graphics_command_buffer*> registered_command_buffers;
     std::vector<graphics_pipeline*> registered_pipelines;
-
+    VmaAllocator mem_allocator;
 };
 
 enum class shader_type {
@@ -47,7 +48,8 @@ void terminate_vulkan(vulkan_data& data);
 bool is_vulkan_initialised(vulkan_data& data);
 
 VkShaderModule create_shader_module_from_spirv(vulkan_data& vulkan, std::vector<char>& shader_data);
-VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(shader_type type, VkShaderModule module);
+VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(VkShaderModule module, shader_type type, const char* entry_point = "main");
+
 void submit_command_buffers_graphics(vulkan_data& data, std::vector<VkCommandBuffer> command_buffers);
 void present_frame(vulkan_data& data);
 
