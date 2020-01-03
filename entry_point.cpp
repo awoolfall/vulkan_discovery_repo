@@ -88,12 +88,13 @@ int main(int argc, char* argv)
         {{-0.9f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}}
     };
 
-    vertex_buffer<vertex> buffer;
-    buffer.initialise(vkdata, vert_data);
+    dynamic_buffer<vertex> buffer;
+    buffer.initialise(vkdata, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vert_data.size());
+    buffer.fill_buffer(vkdata, vert_data);
 
     triangle_cmd cmd;
     cmd.pipeline = &basic_p.pipeline;
-    cmd.vert_buffer = &buffer.buffer;
+    cmd.vert_buffer = &buffer.get_vk_buffer();
     cmd.initialise(vkdata);
 
     glm::mat4 matrix;
@@ -102,6 +103,10 @@ int main(int argc, char* argv)
 
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+        vert_data[2].pos.r = (float)sin(glfwGetTime());
+        buffer.fill_buffer(vkdata, vert_data);
+
         submit_command_buffers_graphics(vkdata, cmd.cmd_buffers());
         present_frame(vkdata);
     }
