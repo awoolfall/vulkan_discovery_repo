@@ -21,12 +21,14 @@ protected:
     virtual VkPipelineMultisampleStateCreateInfo gen_multisampling_state_info(vulkan_data& data);
     virtual VkPipelineColorBlendStateCreateInfo gen_color_blend_state(vulkan_data& data, std::vector<VkPipelineColorBlendAttachmentState>& attachment_states);
     virtual std::vector<VkDynamicState> gen_dynamic_state_info(vulkan_data& data);
+    virtual std::vector<VkDescriptorSetLayout> gen_descriptor_set_layouts(vulkan_data& data);
     virtual VkPipelineLayout gen_pipeline_layout(vulkan_data& data);
     virtual std::vector<VkPipelineShaderStageCreateInfo> load_shader_stage_infos(vulkan_data& data);
 
 public:
     VkPipeline pipeline;
     VkPipelineLayout layout;
+    std::vector<VkDescriptorSetLayout> descriptor_set_layouts;
 
     void initialise(vulkan_data& data, VkRenderPass render_pass);
     void terminate(vulkan_data& data);

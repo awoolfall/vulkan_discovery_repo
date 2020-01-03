@@ -104,14 +104,20 @@ std::vector<VkDynamicState> graphics_pipeline::gen_dynamic_state_info(vulkan_dat
     return dynamicStates;
 }
 
+std::vector<VkDescriptorSetLayout> graphics_pipeline::gen_descriptor_set_layouts(vulkan_data& data)
+{
+    std::vector<VkDescriptorSetLayout> empty;
+    return empty;
+}
+
 VkPipelineLayout graphics_pipeline::gen_pipeline_layout(vulkan_data& data)
 {
     VkPipelineLayout pipelineLayout;
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0; // Optional
-    pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+    pipelineLayoutInfo.setLayoutCount = (uint32_t)this->descriptor_set_layouts.size(); // Optional
+    pipelineLayoutInfo.pSetLayouts = this->descriptor_set_layouts.data(); // Optional
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
@@ -151,6 +157,7 @@ void graphics_pipeline::initialise(vulkan_data& data, VkRenderPass render_pass)
     if (this->shader_stages.size() == 0) {
         this->shader_stages = this->load_shader_stage_infos(data);
     }
+    this->descriptor_set_layouts = this->gen_descriptor_set_layouts(data);
     this->layout = this->gen_pipeline_layout(data);
     this->render_pass = render_pass;
 
@@ -208,9 +215,12 @@ void graphics_pipeline::clear_shader_stages(vulkan_data& data)
 void graphics_pipeline::terminate(vulkan_data& data)
 {
     unregister_pipeline(data, this);
-    this->clear_shader_stages(data);
     vkDestroyPipeline(data.logical_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(data.logical_device, this->layout, nullptr);
+    for (size_t i = 0; i < this->descriptor_set_layouts.size(); i++) {
+        vkDestroyDescriptorSetLayout(data.logical_device, this->descriptor_set_layouts[i], nullptr);
+    }
+    this->clear_shader_stages(data);
 }
 
 VkPipeline graphics_pipeline::get_pipeline() const

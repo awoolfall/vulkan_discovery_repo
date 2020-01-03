@@ -57,3 +57,16 @@ void register_command_buffer(vulkan_data& data, graphics_command_buffer* buffer)
 void unregister_command_buffer(vulkan_data& data, graphics_command_buffer* buffer);
 void register_pipeline(vulkan_data& data, graphics_pipeline* pipeline);
 void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline);
+
+void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, size_t byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
+uint32_t get_image_index(vulkan_data& data);
+
+template <typename T>
+void fill_buffer(vulkan_data& data, VmaAllocation& alloc, std::vector<T>& buffer_data)
+{
+    size_t data_size = buffer_data.size() * sizeof(buffer_data[0]);
+    void* mapped_data;
+    vmaMapMemory(data.mem_allocator, alloc, &mapped_data);
+    memcpy(mapped_data, buffer_data.data(), data_size);
+    vmaUnmapMemory(data.mem_allocator, alloc);
+}

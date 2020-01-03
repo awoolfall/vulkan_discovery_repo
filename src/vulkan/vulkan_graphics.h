@@ -2,3 +2,4 @@
 #include "vulkan_command_buffer.h"
 #include "vulkan_graphics_pipeline.h"
 #include "vulkan_buffer.h"
+#include "vulkan_uniform_buffer.h"

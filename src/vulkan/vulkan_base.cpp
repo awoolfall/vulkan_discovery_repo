@@ -590,13 +590,7 @@ void submit_command_buffers_graphics(vulkan_data& data, std::vector<VkCommandBuf
 {
     vkWaitForFences(data.logical_device, 1, &data.in_flight_fences[data.current_frame], VK_TRUE, UINT64_MAX);
 
-    uint32_t imageIndex;
-    if (data.image_index < 0) {
-        vkAcquireNextImageKHR(data.logical_device, data.swap_chain, UINT64_MAX, data.image_available_sems[data.current_frame], VK_NULL_HANDLE, &imageIndex);
-        data.image_index = imageIndex;
-    } else {
-        imageIndex = (uint32_t)data.image_index;
-    }
+    uint32_t imageIndex = get_image_index(data);
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -621,13 +615,7 @@ void present_frame(vulkan_data& data)
 {
     VkSemaphore signalSemaphores[] = {data.render_finished_sems[data.current_frame]};
     VkSwapchainKHR swapChains[] = {data.swap_chain};
-    uint32_t imageIndex;
-    if (data.image_index < 0) {
-        vkAcquireNextImageKHR(data.logical_device, data.swap_chain, UINT64_MAX, data.image_available_sems[data.current_frame], VK_NULL_HANDLE, &imageIndex);
-        data.image_index = imageIndex;
-    } else {
-        imageIndex = (uint32_t)data.image_index;
-    }
+    uint32_t imageIndex = get_image_index(data);
 
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -690,5 +678,32 @@ void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline)
     }
 }
 
+void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, size_t byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage)
+{
+    VkBufferCreateInfo bufferInfo = {};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = byte_data_size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-/* https://vulkan-tutorial.com/Drawing_a_triangle/Drawing/Command_buffers - how do we get multiple objects rendering? */
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = memory_usage;
+    
+    if (vmaCreateBuffer(data.mem_allocator, &bufferInfo, &allocInfo, buffer, allocation, nullptr) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create vertex buffer!");
+    }
+}
+
+uint32_t get_image_index(vulkan_data& data)
+{
+    uint32_t image_index;
+    if (data.image_index < 0) {
+        vkAcquireNextImageKHR(data.logical_device, data.swap_chain, UINT64_MAX, data.image_available_sems[data.current_frame], VK_NULL_HANDLE, &image_index);
+        data.image_index = image_index;
+    } else {
+        image_index = (uint32_t)data.image_index;
+    }
+    return image_index;
+}
+
+/* https://vulkan-tutorial.com/Uniform_buffers/Descriptor_pool_and_sets - Descriptor pool and sets */
