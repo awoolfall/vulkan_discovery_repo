@@ -1,6 +1,7 @@
 #include "vulkan_base.h"
 #include "vulkan_command_buffer.h"
 #include "vulkan_graphics_pipeline.h"
+#include "vulkan_uniform_buffer.h"
 
 #include "../platform.h"
 
@@ -20,7 +21,7 @@ struct physical_device_indicies
 
 struct swap_chain_support_details
 {
-    VkSurfaceCapabilitiesKHR capabilities;
+    VkSurfaceCapabilitiesKHR capabilities{};
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> present_modes;
 };
@@ -47,7 +48,7 @@ void create_instance(vulkan_data* data)
 #ifndef NDEBUG
     /* validation layers */
     const std::vector<const char*> validationLayers = {
-        "VK_LAYER_KHRONOS_validation"
+        "VK_LAYER_LUNARG_standard_validation"
     };
     create_info.enabledLayerCount = (uint32_t)validationLayers.size();
     create_info.ppEnabledLayerNames = validationLayers.data();
@@ -82,7 +83,7 @@ void create_surface(vulkan_data* data, GLFWwindow* window)
 
 physical_device_indicies get_device_indicies(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
-    physical_device_indicies indicies;
+    physical_device_indicies indicies{};
 
     uint32_t num_queue_families = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &num_queue_families, nullptr);
@@ -575,7 +576,7 @@ VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(VkShaderModule modu
         case shader_type::FRAGMENT:  {stage_flag = VK_SHADER_STAGE_FRAGMENT_BIT;}   break;
         case shader_type::GEOMETRY:  {stage_flag = VK_SHADER_STAGE_GEOMETRY_BIT;}   break;
         case shader_type::COMPUTE:   {stage_flag = VK_SHADER_STAGE_COMPUTE_BIT;}    break;
-        default:                    throw std::runtime_error("What...");            break;
+        default:                     throw std::runtime_error("What...");    break;
     }
     VkPipelineShaderStageCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -678,7 +679,7 @@ void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline)
     }
 }
 
-void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, size_t byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage)
+void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, VkDeviceSize byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage)
 {
     VkBufferCreateInfo bufferInfo = {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

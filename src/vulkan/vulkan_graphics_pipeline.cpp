@@ -1,4 +1,6 @@
 #include "vulkan_graphics_pipeline.h"
+
+#include <utility>
 #include "../platform.h"
 
 VkPipelineInputAssemblyStateCreateInfo graphics_pipeline::gen_input_assembly_info(vulkan_data& data)
@@ -104,29 +106,6 @@ std::vector<VkDynamicState> graphics_pipeline::gen_dynamic_state_info(vulkan_dat
     return dynamicStates;
 }
 
-std::vector<VkDescriptorSetLayout> graphics_pipeline::gen_descriptor_set_layouts(vulkan_data& data)
-{
-    std::vector<VkDescriptorSetLayout> empty;
-    return empty;
-}
-
-VkPipelineLayout graphics_pipeline::gen_pipeline_layout(vulkan_data& data)
-{
-    VkPipelineLayout pipelineLayout;
-
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = (uint32_t)this->descriptor_set_layouts.size(); // Optional
-    pipelineLayoutInfo.pSetLayouts = this->descriptor_set_layouts.data(); // Optional
-    pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-    if (vkCreatePipelineLayout(data.logical_device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create pipeline layout!");
-    }
-    return pipelineLayout;
-}
-
 std::vector<VkPipelineShaderStageCreateInfo> graphics_pipeline::load_shader_stage_infos(vulkan_data& data)
 {
     throw std::logic_error("Have not passed any shader stages and no default shader loading has been set!");
@@ -134,11 +113,11 @@ std::vector<VkPipelineShaderStageCreateInfo> graphics_pipeline::load_shader_stag
     return stages;
 }
 
-
-void graphics_pipeline::initialise(vulkan_data& data, VkRenderPass render_pass)
+void graphics_pipeline::initialise(vulkan_data& data, VkRenderPass input_render_pass)
 {
     std::vector<VkVertexInputBindingDescription> binding_descriptions; std::vector<VkVertexInputAttributeDescription> attrib_descriptions;
     this->gen_vertex_input_info(data, &binding_descriptions, &attrib_descriptions);
+
     VkPipelineVertexInputStateCreateInfo vertex_input_state_info = {};
     vertex_input_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_info.vertexBindingDescriptionCount = (uint32_t)binding_descriptions.size();
@@ -154,12 +133,46 @@ void graphics_pipeline::initialise(vulkan_data& data, VkRenderPass render_pass)
     std::vector<VkPipelineColorBlendAttachmentState> attachment_states;
     VkPipelineColorBlendStateCreateInfo color_blend_state_info = this->gen_color_blend_state(data, attachment_states);
     std::vector<VkDynamicState> dynamic_states = this->gen_dynamic_state_info(data);
-    if (this->shader_stages.size() == 0) {
+    
+    if (this->shader_stages.empty()) {
         this->shader_stages = this->load_shader_stage_infos(data);
     }
-    this->descriptor_set_layouts = this->gen_descriptor_set_layouts(data);
-    this->layout = this->gen_pipeline_layout(data);
-    this->render_pass = render_pass;
+
+    // gen uniform buffers
+    std::vector<VkDescriptorSetLayoutBinding> layout_bindings = gen_descriptor_set_bindings(data);
+
+    // create the descriptor set layout
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    if (!layout_bindings.empty()) {
+        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = static_cast<uint32_t>(layout_bindings.size());
+        layoutInfo.pBindings = layout_bindings.data();
+        if (vkCreateDescriptorSetLayout(data.logical_device, &layoutInfo, nullptr, &this->descriptor_set_layout) !=
+            VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor set layout!");
+        }
+
+        // generate pipeline layout
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = 1;
+        pipelineLayoutInfo.pSetLayouts = &this->descriptor_set_layout;
+        pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+        pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+    } else {
+        // generate pipeline layout
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = 0;
+        pipelineLayoutInfo.pSetLayouts = nullptr;
+        pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+        pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+    }
+
+    if (vkCreatePipelineLayout(data.logical_device, &pipelineLayoutInfo, nullptr, &this->layout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+    }
+
+    this->render_pass = input_render_pass;
 
     VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
     dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -184,13 +197,13 @@ void graphics_pipeline::initialise(vulkan_data& data, VkRenderPass render_pass)
     pipelineInfo.pMultisampleState = &multisample_state_info;
     pipelineInfo.pDepthStencilState = nullptr; // Optional @TODO
     pipelineInfo.pColorBlendState = &color_blend_state_info;
-    if (dynamic_states.size() == 0) {
+    if (dynamic_states.empty()) {
         pipelineInfo.pDynamicState = nullptr;
     } else {
         pipelineInfo.pDynamicState = &dynamic_state_info;
     }
     pipelineInfo.layout = this->layout;
-    pipelineInfo.renderPass = render_pass;
+    pipelineInfo.renderPass = input_render_pass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipelineInfo.basePipelineIndex = -1; // Optional
@@ -217,20 +230,41 @@ void graphics_pipeline::terminate(vulkan_data& data)
     unregister_pipeline(data, this);
     vkDestroyPipeline(data.logical_device, this->pipeline, nullptr);
     vkDestroyPipelineLayout(data.logical_device, this->layout, nullptr);
-    for (size_t i = 0; i < this->descriptor_set_layouts.size(); i++) {
-        vkDestroyDescriptorSetLayout(data.logical_device, this->descriptor_set_layouts[i], nullptr);
+    if (!this->uniform_buffers.empty()) {
+        vkDestroyDescriptorSetLayout(data.logical_device, this->descriptor_set_layout, nullptr);
     }
     this->clear_shader_stages(data);
 }
 
-VkPipeline graphics_pipeline::get_pipeline() const
-{
-    return this->pipeline;
+VkPipeline &graphics_pipeline::get_pipeline() {
+    return pipeline;
 }
 
-VkPipelineShaderStageCreateInfo gen_shader_stage_info_from_spirv(vulkan_data& data, std::string& abs_path, shader_type type, const char* entry_point)
+VkPipelineLayout &graphics_pipeline::get_pipeline_layout() {
+    return layout;
+}
+
+VkDescriptorSetLayout &graphics_pipeline::get_descriptor_set_layout() {
+    return descriptor_set_layout;
+}
+
+std::vector<VkDescriptorSetLayoutBinding> graphics_pipeline::gen_descriptor_set_bindings(vulkan_data &data) {
+    return std::vector<VkDescriptorSetLayoutBinding>();
+}
+
+VkDescriptorSetLayoutBinding graphics_pipeline::create_descriptor_set_binding(uint32_t binding, VkShaderStageFlags stages) {
+    VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+    uboLayoutBinding.binding = binding;
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.stageFlags = stages;
+    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+    return uboLayoutBinding;
+}
+
+VkPipelineShaderStageCreateInfo gen_shader_stage_info_from_spirv(vulkan_data& data, std::string abs_path, shader_type type, const char* entry_point)
 {
-    auto vert_data = read_data_from_binary_file(abs_path);
+    auto vert_data = read_data_from_binary_file(std::move(abs_path));
     auto module = create_shader_module_from_spirv(data, vert_data);
     auto info = gen_shader_stage_create_info(module, type, entry_point);
     return info;

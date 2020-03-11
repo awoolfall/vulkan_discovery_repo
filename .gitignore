@@ -1,5 +1,7 @@
 /build/
+/cmake-build-debug/
 /sandbox/build/
 /sandbox/zips/
 **.bat
 **/.vscode
+**/.idea

@@ -36,7 +36,8 @@ void graphics_command_buffer::recreate(vulkan_data& data)
             throw std::runtime_error("failed to begin recording command buffer!");
         }
 
-        this->fill_command_buffer(data, this->command_buffers[i], data.swap_chain_data.frame_buffers[i]);
+        this->current_index = i;
+        this->fill_command_buffer(data, i);
 
         if (vkEndCommandBuffer(this->command_buffers[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");

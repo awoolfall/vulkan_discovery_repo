@@ -2,8 +2,7 @@
 
 #include "vulkan_base.h"
 
-template <typename T>
-class buffer
+class buffer_base
 {
 public:
     virtual VkBuffer& get_vk_buffer() = 0;
@@ -11,11 +10,11 @@ public:
 };
 
 template <typename T>
-class static_buffer : public buffer<T>
+class static_buffer : public buffer_base
 {
 private:
-    VkBuffer buffer;
-    VmaAllocation allocation;
+    VkBuffer buffer{};
+    VmaAllocation allocation{};
 
     static void copy_buffer(vulkan_data& data, VkBuffer src_buffer, VkBuffer dst_buffer, size_t data_size)
     {
@@ -69,18 +68,18 @@ public:
         vmaDestroyBuffer(data.mem_allocator, buffer, allocation);
     }
 
-    virtual VkBuffer& get_vk_buffer() override
+    VkBuffer& get_vk_buffer() final
     {
         return buffer;
     }
 };
 
 template <typename T>
-class dynamic_buffer : public buffer<T>
+class dynamic_buffer : public buffer_base
 {
 private:
-    VkBuffer buffer;
-    VmaAllocation allocation;
+    VkBuffer buffer{};
+    VmaAllocation allocation{};
 
 public:
     void initialise(vulkan_data& data, VkBufferUsageFlagBits usage, size_t data_length)
@@ -99,7 +98,7 @@ public:
         vmaDestroyBuffer(data.mem_allocator, buffer, allocation);
     }
 
-    virtual VkBuffer& get_vk_buffer() override
+    VkBuffer& get_vk_buffer() final
     {
         return buffer;
     }

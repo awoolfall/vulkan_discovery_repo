@@ -5,9 +5,10 @@
 class triangle_cmd : public graphics_command_buffer
 {
 protected:
-    virtual void fill_command_buffer(vulkan_data& data, VkCommandBuffer& buffer, VkFramebuffer& frame_buffer) override final;
+    void fill_command_buffer(vulkan_data& data, size_t index) final;
 
 public:
-    VkPipeline* pipeline;
-    VkBuffer* vert_buffer;
+    graphics_pipeline* pipeline = nullptr;
+    buffer_base* vert_buffer = nullptr;
+    uniform_buffer_base* uniform_buffers = nullptr;
 };

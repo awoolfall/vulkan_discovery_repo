@@ -24,11 +24,6 @@ const float quad_verticies[18] = {
     -0.5f, -0.5f, 0.0f
 };
 
-struct quad_renderer
-{
-    int placeholder;
-};
-
 void perform_camera_control(GLFWwindow* window, entt::registry& Registry, entt::entity Camera)
 {
     transform& cam_transform = Registry.get<transform> (Camera);
@@ -65,7 +60,7 @@ void perform_camera_control(GLFWwindow* window, entt::registry& Registry, entt::
     cam_transform.position.z += screen_space_movement.z;
 }
 
-int main(int argc, char* argv)
+int main(int argc, char** argv)
 {
     glfwInit();
 
@@ -79,22 +74,40 @@ int main(int argc, char* argv)
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
+
     basic_pipeline basic_p;
     basic_p.initialise(vkdata, vkdata.render_pass);
 
-    std::vector<vertex> vert_data = {
+    auto basic_ubo = basic_p.new_mvp_ubo(vkdata);
+    basic_ubo.data().model = glm::rotate(
+            glm::mat4(1.0f),
+            glm::radians(40.0f),
+            glm::vec3(0.0f, 0.0f, 1.0f));
+    basic_ubo.data().view = glm::lookAt(
+            glm::vec3(2.0f, 2.0f, 2.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, 0.0f, 1.0f));
+    basic_ubo.data().proj =glm::perspective(
+            glm::radians(45.0f),
+            vkdata.swap_chain_data.extent.width / (float) vkdata.swap_chain_data.extent.height,
+            0.1f, 10.0f);
+    basic_ubo.data().proj[1][1] *= -1;
+    basic_ubo.update_buffer(vkdata);
+
+    std::vector<basic_pipeline::vertex> vert_data = {
         {{0.0f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
         {{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
         {{-0.9f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}}
     };
 
-    dynamic_buffer<vertex> buffer;
+    dynamic_buffer<basic_pipeline::vertex> buffer;
     buffer.initialise(vkdata, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vert_data.size());
     buffer.fill_buffer(vkdata, vert_data);
 
     triangle_cmd cmd;
-    cmd.pipeline = &basic_p.pipeline;
-    cmd.vert_buffer = &buffer.get_vk_buffer();
+    cmd.pipeline = &basic_p;
+    cmd.vert_buffer = &buffer;
+    cmd.uniform_buffers = &basic_ubo;
     cmd.initialise(vkdata);
 
     glm::mat4 matrix;
@@ -111,6 +124,7 @@ int main(int argc, char* argv)
         present_frame(vkdata);
     }
 
+    basic_ubo.terminate(vkdata);
     buffer.terminate(vkdata);
     cmd.terminate(vkdata);
     basic_p.terminate(vkdata);

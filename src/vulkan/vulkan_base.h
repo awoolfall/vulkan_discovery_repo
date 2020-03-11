@@ -7,6 +7,7 @@
 
 class graphics_command_buffer;
 class graphics_pipeline;
+class uniform_buffer_base;
 
 #define MAX_FRAMES_IN_FLIGHT 2
 struct vulkan_data
@@ -58,7 +59,7 @@ void unregister_command_buffer(vulkan_data& data, graphics_command_buffer* buffe
 void register_pipeline(vulkan_data& data, graphics_pipeline* pipeline);
 void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline);
 
-void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, size_t byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
+void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, VkDeviceSize byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
 uint32_t get_image_index(vulkan_data& data);
 
 template <typename T>
