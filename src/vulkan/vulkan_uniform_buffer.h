@@ -53,9 +53,9 @@ private:
         }
     }
 
-    void populate_descriptor_sets(vulkan_data& vkdata, uint32_t num_swap_chain_images)
+    void populate_descriptor_sets(vulkan_data& vkdata)
     {
-        for (size_t i = 0; i < num_swap_chain_images; i++) {
+        for (size_t i = 0; i < vkdata.swap_chain_data.images.size(); i++) {
             VkDescriptorBufferInfo bufferInfo = {};
             bufferInfo.buffer = this->uniform_buffers[i];
             bufferInfo.offset = 0;
@@ -97,6 +97,7 @@ public:
 
         create_descriptor_pool(vk_data, num_swap_chain_images, num_swap_chain_images);
         create_descriptor_sets(vk_data, num_swap_chain_images);
+        populate_descriptor_sets(vk_data);
     }
 
     void terminate(vulkan_data& vk_data)
@@ -116,8 +117,6 @@ public:
         vmaMapMemory(vk_data.mem_allocator, allocations[image_index], &map_data);
         memcpy(map_data, &this->uniform_data, sizeof(T));
         vmaUnmapMemory(vk_data.mem_allocator, allocations[image_index]);
-
-        populate_descriptor_sets(vk_data, static_cast<uint32_t> (vk_data.swap_chain_data.images.size()));
     }
 
     void recreate_descriptor_sets(vulkan_data& vk_data, VkDescriptorSetLayout& descriptor_set_layout) final

@@ -110,15 +110,12 @@ int main(int argc, char** argv)
     cmd.uniform_buffers = &basic_ubo;
     cmd.initialise(vkdata);
 
-    glm::mat4 matrix;
-    glm::vec4 vec;
-    auto test = matrix * vec;
-
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
-        vert_data[2].pos.r = (float)sin(glfwGetTime());
+        vert_data[2].pos.x = (float)sin(glfwGetTime());
         buffer.fill_buffer(vkdata, vert_data);
+        basic_ubo.update_buffer(vkdata);
 
         submit_command_buffers_graphics(vkdata, cmd.cmd_buffers());
         present_frame(vkdata);
