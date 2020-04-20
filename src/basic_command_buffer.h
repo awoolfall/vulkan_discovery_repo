@@ -10,5 +10,6 @@ protected:
 public:
     graphics_pipeline* pipeline = nullptr;
     buffer_base* vert_buffer = nullptr;
+    buffer_base* index_buffer = nullptr;
     uniform_buffer_base* uniform_buffers = nullptr;
 };

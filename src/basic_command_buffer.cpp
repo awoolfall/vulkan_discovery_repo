@@ -25,10 +25,12 @@ void triangle_cmd::fill_command_buffer(vulkan_data& data, size_t index)
             this->pipeline->get_pipeline());
 
     VkBuffer vert_buffers[] = {this->vert_buffer->get_vk_buffer()};
+    VkBuffer index_buffers[] = {this->index_buffer->get_vk_buffer()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(cmd_buffer(), 0, 1, vert_buffers, offsets);
+    vkCmdBindIndexBuffer(cmd_buffer(), this->index_buffer->get_vk_buffer(), 0, VK_INDEX_TYPE_UINT32);
     
-    vkCmdDraw(cmd_buffer(), 3, 1, 0, 0);
+    vkCmdDrawIndexed(cmd_buffer(), this->index_buffer->get_count(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(cmd_buffer());
 }

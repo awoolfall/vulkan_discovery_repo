@@ -176,14 +176,36 @@ void pick_physical_device(vulkan_data* data, std::vector<const char*>& required_
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(data->instance, &deviceCount, devices.data());
+    std::vector<VkPhysicalDevice> suitable_devices;
 
+    // find all suitable devices (required extensions)
     for (VkPhysicalDevice device : devices) {
         if (is_device_suitable(device, data->surface, required_extensions)) {
+            suitable_devices.push_back(device);
             data->physical_device = device;
             break;
         }
     }
 
+    // score suitable devices for best physical device (optional features)
+    VkPhysicalDevice* best_device = VK_NULL_HANDLE;
+    int best_score = 0;
+    for (VkPhysicalDevice device: suitable_devices) {
+        int score = 0;
+        VkPhysicalDeviceFeatures supportedFeatures;
+        vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+        if (supportedFeatures.samplerAnisotropy) {
+            score += 1;
+        }
+
+        if (score > best_score) {
+            best_device = &device;
+            best_score = score;
+        }
+    }
+
+    data->physical_device = *best_device;
     if (data->physical_device == VK_NULL_HANDLE) {
         throw std::runtime_error("Unable to select a suitable physical device!");
     }
@@ -549,11 +571,6 @@ void terminate_vulkan(vulkan_data& data)
     data.glfw_window = nullptr;
 }
 
-bool is_vulkan_initialised(vulkan_data& data)
-{
-    return (data.instance != nullptr);
-}
-
 VkShaderModule create_shader_module_from_spirv(vulkan_data& vulkan, std::vector<char>& shader_data)
 {
     VkShaderModuleCreateInfo create_info = {};
@@ -679,6 +696,21 @@ void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline)
     }
 }
 
+void register_uniform_buffer(vulkan_data& data, uniform_buffer_base* uniform_buffer)
+{
+    if (!vector_contains<uniform_buffer_base*>(uniform_buffer, data.registered_uniform_buffers, nullptr)) {
+        data.registered_uniform_buffers.push_back(uniform_buffer);
+    }
+}
+
+void unregister_uniform_buffer(vulkan_data& data, uniform_buffer_base* uniform_buffer)
+{
+    size_t index;
+    if (vector_contains<uniform_buffer_base*>(uniform_buffer, data.registered_uniform_buffers, &index)) {
+        data.registered_uniform_buffers.erase(data.registered_uniform_buffers.begin() + index);
+    }
+}
+
 void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, VkDeviceSize byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage)
 {
     VkBufferCreateInfo bufferInfo = {};
@@ -707,4 +739,19 @@ uint32_t get_image_index(vulkan_data& data)
     return image_index;
 }
 
-/* https://vulkan-tutorial.com/Uniform_buffers/Descriptor_pool_and_sets - Descriptor pool and sets */
+VkPhysicalDeviceFeatures get_device_features(vulkan_data& data)
+{
+    VkPhysicalDeviceFeatures supportedFeatures;
+    vkGetPhysicalDeviceFeatures(data.physical_device, &supportedFeatures);
+    return supportedFeatures;
+}
+
+void fill_buffer(vulkan_data& vkdata, VmaAllocation& alloc, size_t data_length, void* data_start)
+{
+    void* mapped_mem;
+    vmaMapMemory(vkdata.mem_allocator, alloc, &mapped_mem);
+    memcpy(mapped_mem, data_start, data_length);
+    vmaUnmapMemory(vkdata.mem_allocator, alloc);
+}
+
+/* https://vulkan-tutorial.com/en/Texture_mapping/Combined_image_sampler - Combined image sampler */

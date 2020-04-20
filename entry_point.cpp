@@ -79,41 +79,65 @@ int main(int argc, char** argv)
     basic_p.initialise(vkdata, vkdata.render_pass);
 
     auto basic_ubo = basic_p.new_mvp_ubo(vkdata);
-    basic_ubo.data().model = glm::rotate(
-            glm::mat4(1.0f),
-            glm::radians(40.0f),
-            glm::vec3(0.0f, 0.0f, 1.0f));
-    basic_ubo.data().view = glm::lookAt(
-            glm::vec3(2.0f, 2.0f, 2.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 1.0f));
-    basic_ubo.data().proj =glm::perspective(
+    basic_ubo.data().model = glm::mat4(1.0);
+    basic_ubo.data().view = glm::translate(glm::mat4(1.0), {0.0, 0.0, -5.0});
+    basic_ubo.data().proj = glm::perspective(
             glm::radians(45.0f),
             vkdata.swap_chain_data.extent.width / (float) vkdata.swap_chain_data.extent.height,
             0.1f, 10.0f);
-    basic_ubo.data().proj[1][1] *= -1;
     basic_ubo.update_buffer(vkdata);
 
     std::vector<basic_pipeline::vertex> vert_data = {
-        {{0.0f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-        {{-0.9f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}}
+            {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+            {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+            {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+            {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
     };
+
+    std::vector<uint32_t> index_data = {0, 1, 2, 0, 2, 3};
 
     dynamic_buffer<basic_pipeline::vertex> buffer;
     buffer.initialise(vkdata, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vert_data.size());
     buffer.fill_buffer(vkdata, vert_data);
 
+    static_buffer<uint32_t> i_buf;
+    i_buf.initialise(vkdata, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, index_data);
+
     triangle_cmd cmd;
     cmd.pipeline = &basic_p;
     cmd.vert_buffer = &buffer;
+    cmd.index_buffer = &i_buf;
     cmd.uniform_buffers = &basic_ubo;
     cmd.initialise(vkdata);
+
+    glm::vec3 cameraPos = {0.0, 0.0, 0.0};
+    glm::vec3 cameraRot = {0.0, 0.0, 0.0};
 
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
-        vert_data[2].pos.x = (float)sin(glfwGetTime());
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2)) {
+            if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                if (glfwRawMouseMotionSupported())
+                    glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+            } else {
+                double cursorX, cursorY;
+                glfwGetCursorPos(window, &cursorX, &cursorY);
+                cameraRot.y += (float)glm::radians(-cursorY/2.0);
+                cameraRot.x += (float)glm::radians(cursorX/2.0);
+
+                basic_ubo.data().view = glm::translate(glm::mat4(1.0), {0.0, 0.0, -5.0});
+                basic_ubo.data().view = glm::rotate(basic_ubo.data().view, cameraRot.y, {1, 0, 0});
+                basic_ubo.data().view = glm::rotate(basic_ubo.data().view, cameraRot.x, {0, 1, 0});
+                basic_ubo.data().view = glm::translate(basic_ubo.data().view, cameraPos);
+            }
+            glfwSetCursorPos(window, 0.0, 0.0);
+        } else {
+            if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL)
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+
         buffer.fill_buffer(vkdata, vert_data);
         basic_ubo.update_buffer(vkdata);
 
@@ -123,6 +147,7 @@ int main(int argc, char** argv)
 
     basic_ubo.terminate(vkdata);
     buffer.terminate(vkdata);
+    i_buf.terminate(vkdata);
     cmd.terminate(vkdata);
     basic_p.terminate(vkdata);
     terminate_vulkan(vkdata);

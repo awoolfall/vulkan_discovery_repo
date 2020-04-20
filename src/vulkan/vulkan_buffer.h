@@ -6,7 +6,7 @@ class buffer_base
 {
 public:
     virtual VkBuffer& get_vk_buffer() = 0;
-
+    virtual size_t get_count() = 0;
 };
 
 template <typename T>
@@ -15,6 +15,7 @@ class static_buffer : public buffer_base
 private:
     VkBuffer buffer{};
     VmaAllocation allocation{};
+    size_t size = 0;
 
     static void copy_buffer(vulkan_data& data, VkBuffer src_buffer, VkBuffer dst_buffer, size_t data_size)
     {
@@ -53,6 +54,7 @@ private:
 public:
     void initialise(vulkan_data& data, VkBufferUsageFlagBits usage, std::vector<T> vertex_data)
     {
+        this->size = vertex_data.size();
         size_t byte_size = (vertex_data.size() * sizeof(T));
         create_buffer(data, &buffer, &allocation, byte_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage, VMA_MEMORY_USAGE_GPU_ONLY);
         VkBuffer staging_buffer; VmaAllocation staging_allocation;
@@ -72,6 +74,11 @@ public:
     {
         return buffer;
     }
+
+    size_t get_count() final
+    {
+        return this->size;
+    }
 };
 
 template <typename T>
@@ -80,15 +87,21 @@ class dynamic_buffer : public buffer_base
 private:
     VkBuffer buffer{};
     VmaAllocation allocation{};
+    size_t max_size = 0;
+    size_t size = 0;
 
 public:
     void initialise(vulkan_data& data, VkBufferUsageFlagBits usage, size_t data_length)
     {
+        this->max_size = data_length;
         create_buffer(data, &buffer, &allocation, data_length, usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
     }
 
     void fill_buffer(vulkan_data& vkdata, std::vector<T> data)
     {
+        this->size = data.size();
+        if (this->size > max_size)
+            abort();
         ::fill_buffer(vkdata, allocation, data);
     }
 
@@ -101,5 +114,10 @@ public:
     VkBuffer& get_vk_buffer() final
     {
         return buffer;
+    }
+
+    size_t get_count() final
+    {
+        return this->size;
     }
 };

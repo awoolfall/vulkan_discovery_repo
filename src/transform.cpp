@@ -1,5 +1,4 @@
 #include "transform.h"
-#include <glm/gtc/matrix_transform.hpp>
 
 glm::vec3 get_up_vector(transform &t)
 {

@@ -22,6 +22,8 @@ add_library(discovery_lib ${DISCOVERY_src})
 
 add_executable(discovery entry_point.cpp)
 
+target_link_libraries(discovery discovery_lib)
+
 set(VENDOR_INCLUDES
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/spdlog/include"
@@ -48,15 +50,12 @@ target_link_libraries(discovery_lib
     ${Vulkan_LIBRARIES}
 )
 
-target_link_libraries(discovery 
-    discovery_lib
-)
 
 # copy contents of res/ into the directory of the output executable
 add_custom_command(TARGET discovery PRE_BUILD
                     COMMAND ${CMAKE_COMMAND} -E remove_directory
                     $<TARGET_FILE_DIR:discovery>/res)
-                    
-add_custom_command(TARGET discovery PRE_BUILD 
+
+add_custom_command(TARGET discovery PRE_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_directory
                     ${CMAKE_CURRENT_SOURCE_DIR}/res $<TARGET_FILE_DIR:discovery>/res)

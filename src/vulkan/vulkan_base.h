@@ -36,6 +36,7 @@ struct vulkan_data
     uint32_t current_frame = 0;
     std::vector<graphics_command_buffer*> registered_command_buffers;
     std::vector<graphics_pipeline*> registered_pipelines;
+    std::vector<uniform_buffer_base*> registered_uniform_buffers;
     VmaAllocator mem_allocator;
 };
 
@@ -46,7 +47,6 @@ enum class shader_type {
 
 void initialise_vulkan(vulkan_data* data, GLFWwindow* window);
 void terminate_vulkan(vulkan_data& data);
-bool is_vulkan_initialised(vulkan_data& data);
 
 VkShaderModule create_shader_module_from_spirv(vulkan_data& vulkan, std::vector<char>& shader_data);
 VkPipelineShaderStageCreateInfo gen_shader_stage_create_info(VkShaderModule module, shader_type type, const char* entry_point = "main");
@@ -58,16 +58,18 @@ void register_command_buffer(vulkan_data& data, graphics_command_buffer* buffer)
 void unregister_command_buffer(vulkan_data& data, graphics_command_buffer* buffer);
 void register_pipeline(vulkan_data& data, graphics_pipeline* pipeline);
 void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline);
+void register_uniform_buffer(vulkan_data& data, uniform_buffer_base* uniform_buffer);
+void unregister_uniform_buffer(vulkan_data& data, uniform_buffer_base* uniform_buffer);
 
 void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, VkDeviceSize byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
+void fill_buffer(vulkan_data& vkdata, VmaAllocation& alloc, size_t data_length, void* data_start);
 uint32_t get_image_index(vulkan_data& data);
+
+VkPhysicalDeviceFeatures get_device_features(vulkan_data& data);
 
 template <typename T>
 void fill_buffer(vulkan_data& data, VmaAllocation& alloc, std::vector<T>& buffer_data)
 {
     size_t data_size = buffer_data.size() * sizeof(buffer_data[0]);
-    void* mapped_data;
-    vmaMapMemory(data.mem_allocator, alloc, &mapped_data);
-    memcpy(mapped_data, buffer_data.data(), data_size);
-    vmaUnmapMemory(data.mem_allocator, alloc);
+    fill_buffer(data, alloc, data_size, buffer_data.data());
 }

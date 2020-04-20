@@ -18,6 +18,12 @@ std::vector<VkVertexInputAttributeDescription> basic_pipeline::vertex::get_attri
     desc.offset = offsetof(vertex, color);
     attributeDescriptions.push_back(desc);
 
+    desc.binding = 0;
+    desc.location = 2;
+    desc.format = VK_FORMAT_R32G32_SFLOAT;
+    desc.offset = offsetof(vertex, tex_coord);
+    attributeDescriptions.push_back(desc);
+
     return attributeDescriptions;
 }
 
@@ -44,14 +50,14 @@ std::vector<VkPipelineShaderStageCreateInfo> basic_pipeline::load_shader_stage_i
 
 std::vector<VkDynamicState> basic_pipeline::gen_dynamic_state_info(vulkan_data& data)
 {
-    std::vector<VkDynamicState> dynamicStates = {
+    return {
         VK_DYNAMIC_STATE_LINE_WIDTH
     };
-    return dynamicStates;
 }
 
 std::vector<VkDescriptorSetLayoutBinding> basic_pipeline::gen_descriptor_set_bindings(vulkan_data &data) {
     return {
-        create_descriptor_set_binding(0, VK_SHADER_STAGE_VERTEX_BIT)
+        create_descriptor_set_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT),
+        create_descriptor_set_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
     };
 }

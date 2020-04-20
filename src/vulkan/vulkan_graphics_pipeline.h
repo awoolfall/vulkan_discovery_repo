@@ -19,7 +19,7 @@ protected:
     VkPipelineLayout layout;
     VkDescriptorSetLayout descriptor_set_layout;
 
-    static VkDescriptorSetLayoutBinding create_descriptor_set_binding(uint32_t binding, VkShaderStageFlags stages);
+    static VkDescriptorSetLayoutBinding create_descriptor_set_binding(uint32_t binding, VkDescriptorType descriptor_type, VkShaderStageFlags stages);
 
     /**
      * an abstract function where vertex input info is generated
@@ -47,7 +47,7 @@ protected:
     virtual std::vector<VkDescriptorSetLayoutBinding> gen_descriptor_set_bindings(vulkan_data& data);
 
 public:
-    void initialise(vulkan_data& data, VkRenderPass input_render_pass);
+    void initialise(vulkan_data& vkdata, VkRenderPass input_render_pass);
     void terminate(vulkan_data& data);
 
     VkPipeline& get_pipeline();
@@ -77,4 +77,7 @@ VkVertexInputBindingDescription get_binding_description_instanced(size_t binding
     return bindingDescription;
 }
 
-#define VERTEX_INPUT_DESCRIPTIONS(type) static VkVertexInputBindingDescription get_binding_description(size_t binding){ return ::get_binding_description<type>(binding); } static VkVertexInputBindingDescription get_binding_description_instanced(size_t binding){ return ::get_binding_description_instanced<type>(binding); } static std::vector<VkVertexInputAttributeDescription> get_attribute_descriptions();
+#define VERTEX_INPUT_DESCRIPTIONS(type) \
+    static VkVertexInputBindingDescription get_binding_description(size_t binding){ return ::get_binding_description<type>(binding); } \
+    static VkVertexInputBindingDescription get_binding_description_instanced(size_t binding){ return ::get_binding_description_instanced<type>(binding); } \
+    static std::vector<VkVertexInputAttributeDescription> get_attribute_descriptions();
