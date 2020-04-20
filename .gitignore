@@ -5,3 +5,5 @@
 **.bat
 **/.vscode
 **/.idea
+**/res
+**/cmake*
