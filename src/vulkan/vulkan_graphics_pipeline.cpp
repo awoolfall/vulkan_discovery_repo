@@ -115,6 +115,117 @@ std::vector<VkPipelineShaderStageCreateInfo> graphics_pipeline::load_shader_stag
 
 void graphics_pipeline::initialise(vulkan_data& vkdata, VkRenderPass input_render_pass)
 {
+    this->uniformBufferDecls = get_uniform_buffer_declarations();
+    // initialise uniform buffers
+    for (uniform_buffer_decl &decl : this->uniformBufferDecls) {
+        decl.buffer->initialise(vkdata, decl.binding);
+    }
+    this->initialise_routine(vkdata, input_render_pass);
+
+    // register to vkdata
+    register_pipeline(vkdata, this);
+}
+
+void graphics_pipeline::clear_shader_stages(vulkan_data& data)
+{
+    // destroy all generated shader modules
+    for (VkPipelineShaderStageCreateInfo stage : this->shader_stages) {
+        vkDestroyShaderModule(data.logical_device, stage.module, nullptr);
+    }
+    this->shader_stages.clear();
+}
+
+void graphics_pipeline::terminate(vulkan_data& data)
+{
+    unregister_pipeline(data, this);
+    terminate_routine(data);
+
+    // terminate all uniform buffers
+    for (uniform_buffer_decl &decl : this->uniformBufferDecls) {
+        decl.buffer->terminate(data);
+    }
+}
+
+VkPipeline &graphics_pipeline::get_pipeline() {
+    return pipeline;
+}
+
+VkPipelineLayout &graphics_pipeline::get_pipeline_layout() {
+    return layout;
+}
+
+VkDescriptorSetLayoutBinding graphics_pipeline::create_descriptor_set_binding(uint32_t binding, VkDescriptorType descriptor_type, VkShaderStageFlags stages) {
+    VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+    uboLayoutBinding.binding = binding;
+    uboLayoutBinding.descriptorType = descriptor_type;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.stageFlags = stages;
+    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+    return uboLayoutBinding;
+}
+
+std::vector<uniform_buffer_decl> graphics_pipeline::get_uniform_buffer_declarations() {
+    return {};
+}
+
+void graphics_pipeline::populate_descriptor_sets(vulkan_data& vkdata) {
+    // return early if there are no descriptors
+    if (this->uniformBufferDecls.empty()) { return; }
+
+    // check if we actually need to repopulate the descriptor sets
+    bool shouldRepopulate = false;
+    for (uniform_buffer_decl& decl : this->uniformBufferDecls) {
+        if (decl.buffer->should_repopulate_descriptor_sets()) {
+            shouldRepopulate = true;
+        }
+    }
+    if (!shouldRepopulate) { return; }
+
+    // create writeDescriptorSets and update
+    for (size_t i = 0; i < vkdata.swap_chain_data.images.size(); i++) {
+        std::vector<uniform_info> uniformInfos;
+        uniformInfos.reserve(this->uniformBufferDecls.size());
+        std::vector<VkWriteDescriptorSet> descriptorWrites;
+        descriptorWrites.reserve(this->uniformBufferDecls.size());
+
+        for (uniform_buffer_decl& decl : this->uniformBufferDecls) {
+            uniformInfos.push_back(decl.buffer->get_uniform_info(i));
+            auto& info = uniformInfos.back();
+
+            VkWriteDescriptorSet descriptorWrite = {};
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = this->descriptorSets[i];
+            descriptorWrite.dstBinding = decl.binding;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorCount = 1;
+
+            switch (info.type) {
+                case uniform_info::UNIFORM_BUFFER:
+                    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                    descriptorWrite.pBufferInfo = &info.bufferInfo;
+                    break;
+                case uniform_info::SAMPLER_BUFFER:
+                    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                    descriptorWrite.pImageInfo = &info.imageInfo;
+                    break;
+            }
+            descriptorWrites.push_back(descriptorWrite);
+        }
+
+        vkUpdateDescriptorSets(vkdata.logical_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    }
+}
+
+VkDescriptorSet &graphics_pipeline::get_descriptor_set(size_t index) {
+    return this->descriptorSets[index];
+}
+
+void graphics_pipeline::recreate(vulkan_data &vkdata, VkRenderPass input_render_pass) {
+    this->terminate_routine(vkdata);
+    this->initialise_routine(vkdata, input_render_pass);
+}
+
+void graphics_pipeline::initialise_routine(vulkan_data &vkdata, VkRenderPass input_render_pass) {
     std::vector<VkVertexInputBindingDescription> binding_descriptions; std::vector<VkVertexInputAttributeDescription> attrib_descriptions;
     this->gen_vertex_input_info(vkdata, &binding_descriptions, &attrib_descriptions);
 
@@ -133,17 +244,20 @@ void graphics_pipeline::initialise(vulkan_data& vkdata, VkRenderPass input_rende
     std::vector<VkPipelineColorBlendAttachmentState> attachment_states;
     VkPipelineColorBlendStateCreateInfo color_blend_state_info = this->gen_color_blend_state(vkdata, attachment_states);
     std::vector<VkDynamicState> dynamic_states = this->gen_dynamic_state_info(vkdata);
-    
+
     if (this->shader_stages.empty()) {
         this->shader_stages = this->load_shader_stage_infos(vkdata);
     }
 
-    // gen uniform buffers
-    std::vector<VkDescriptorSetLayoutBinding> layout_bindings = gen_descriptor_set_bindings(vkdata);
-
     // create the descriptor set layout
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-    if (!layout_bindings.empty()) {
+    if (!this->uniformBufferDecls.empty()) {
+        // create layout bindings
+        std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
+        for (uniform_buffer_decl& decl : this->uniformBufferDecls) {
+            layout_bindings.push_back(create_descriptor_set_binding(decl.binding, decl.type, decl.shaderFlags));
+        }
+
         VkDescriptorSetLayoutCreateInfo layoutInfo = {};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(layout_bindings.size());
@@ -152,6 +266,42 @@ void graphics_pipeline::initialise(vulkan_data& vkdata, VkRenderPass input_rende
             VK_SUCCESS) {
             throw std::runtime_error("failed to create descriptor set layout!");
         }
+
+        // generate descriptor pool sizes
+        std::vector<VkDescriptorPoolSize> poolSizes;
+        auto num_swap_chain_images = static_cast<uint32_t>(vkdata.swap_chain_data.images.size());
+        for (uniform_buffer_decl& decl : this->uniformBufferDecls) {
+            VkDescriptorPoolSize poolSize{};
+            poolSize.type = decl.type;
+            poolSize.descriptorCount = num_swap_chain_images;
+            poolSizes.push_back(poolSize);
+        }
+
+        // create descriptor pool
+        VkDescriptorPoolCreateInfo poolInfo = {};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes = poolSizes.data();
+        poolInfo.maxSets = num_swap_chain_images;
+
+        if (vkCreateDescriptorPool(vkdata.logical_device, &poolInfo, nullptr, &this->descriptorPool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor pool!");
+        }
+
+        // create descriptor sets
+        std::vector<VkDescriptorSetLayout> layouts(num_swap_chain_images, this->descriptor_set_layout);
+        VkDescriptorSetAllocateInfo allocInfo = {};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = this->descriptorPool;
+        allocInfo.descriptorSetCount = num_swap_chain_images;
+        allocInfo.pSetLayouts = layouts.data();
+
+        this->descriptorSets.resize(num_swap_chain_images);
+        if (vkAllocateDescriptorSets(vkdata.logical_device, &allocInfo, this->descriptorSets.data()) != VK_SUCCESS) {
+            throw std::runtime_error("failed to allocate descriptor sets!");
+        }
+
+        this->populate_descriptor_sets(vkdata);
 
         // generate pipeline layout
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -208,58 +358,18 @@ void graphics_pipeline::initialise(vulkan_data& vkdata, VkRenderPass input_rende
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipelineInfo.basePipelineIndex = -1; // Optional
 
-    if (vkCreateGraphicsPipelines(vkdata.logical_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->pipeline) != VK_SUCCESS) {
+    auto err = vkCreateGraphicsPipelines(vkdata.logical_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->pipeline);
+    if (err != VK_SUCCESS) {
         throw std::runtime_error("failed to create graphics pipeline!");
     }
-
-    // register to vkdata
-    register_pipeline(vkdata, this);
 }
 
-void graphics_pipeline::clear_shader_stages(vulkan_data& data)
-{
-    // destroy all generated shader modules
-    for (VkPipelineShaderStageCreateInfo stage : this->shader_stages) {
-        vkDestroyShaderModule(data.logical_device, stage.module, nullptr);
-    }
-    this->shader_stages.clear();
-}
+void graphics_pipeline::terminate_routine(vulkan_data &vkdata) {
+    vkDestroyPipeline(vkdata.logical_device, this->pipeline, nullptr);
+    vkDestroyPipelineLayout(vkdata.logical_device, this->layout, nullptr);
+    vkDestroyDescriptorPool(vkdata.logical_device, this->descriptorPool, nullptr);
 
-void graphics_pipeline::terminate(vulkan_data& data)
-{
-    unregister_pipeline(data, this);
-    vkDestroyPipeline(data.logical_device, this->pipeline, nullptr);
-    vkDestroyPipelineLayout(data.logical_device, this->layout, nullptr);
-    if (!this->uniform_buffers.empty()) {
-        vkDestroyDescriptorSetLayout(data.logical_device, this->descriptor_set_layout, nullptr);
-    }
-    this->clear_shader_stages(data);
-}
-
-VkPipeline &graphics_pipeline::get_pipeline() {
-    return pipeline;
-}
-
-VkPipelineLayout &graphics_pipeline::get_pipeline_layout() {
-    return layout;
-}
-
-VkDescriptorSetLayout &graphics_pipeline::get_descriptor_set_layout() {
-    return descriptor_set_layout;
-}
-
-std::vector<VkDescriptorSetLayoutBinding> graphics_pipeline::gen_descriptor_set_bindings(vulkan_data &data) {
-    return std::vector<VkDescriptorSetLayoutBinding>();
-}
-
-VkDescriptorSetLayoutBinding graphics_pipeline::create_descriptor_set_binding(uint32_t binding, VkDescriptorType descriptor_type, VkShaderStageFlags stages) {
-    VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-    uboLayoutBinding.binding = binding;
-    uboLayoutBinding.descriptorType = descriptor_type;
-    uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.stageFlags = stages;
-    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
-    return uboLayoutBinding;
+    this->clear_shader_stages(vkdata);
 }
 
 VkPipelineShaderStageCreateInfo gen_shader_stage_info_from_spirv(vulkan_data& data, std::string abs_path, shader_type type, const char* entry_point)

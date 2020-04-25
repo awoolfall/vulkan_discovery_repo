@@ -22,11 +22,8 @@ public:
         glm::mat4 proj = glm::mat4(1.0);
     };
 
-    inline uniform_buffer<mvp_ubo> new_mvp_ubo(vulkan_data& data) {
-        uniform_buffer<mvp_ubo> buf;
-        buf.initialise(data, 0, this->get_descriptor_set_layout());
-        return buf;
-    }
+    uniform_buffer<mvp_ubo> mvp_uniform_buffer;
+    sampler_uniform_buffer sampler_buffer;
 
 protected:
     void gen_vertex_input_info(vulkan_data& data,
@@ -35,5 +32,5 @@ protected:
 
     std::vector<VkPipelineShaderStageCreateInfo> load_shader_stage_infos(vulkan_data& data) final;
     std::vector<VkDynamicState> gen_dynamic_state_info(vulkan_data& data) final;
-    std::vector<VkDescriptorSetLayoutBinding> gen_descriptor_set_bindings(vulkan_data &data) final;
+    std::vector<uniform_buffer_decl> get_uniform_buffer_declarations() final;
 };

@@ -55,9 +55,9 @@ std::vector<VkDynamicState> basic_pipeline::gen_dynamic_state_info(vulkan_data& 
     };
 }
 
-std::vector<VkDescriptorSetLayoutBinding> basic_pipeline::gen_descriptor_set_bindings(vulkan_data &data) {
+std::vector<uniform_buffer_decl> basic_pipeline::get_uniform_buffer_declarations() {
     return {
-        create_descriptor_set_binding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT),
-        create_descriptor_set_binding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        new_uniform_buffer_decl(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &this->mvp_uniform_buffer, VK_SHADER_STAGE_VERTEX_BIT),
+        new_uniform_buffer_decl(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &this->sampler_buffer, VK_SHADER_STAGE_FRAGMENT_BIT)
     };
 }

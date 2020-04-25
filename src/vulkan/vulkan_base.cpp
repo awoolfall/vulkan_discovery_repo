@@ -2,6 +2,7 @@
 #include "vulkan_command_buffer.h"
 #include "vulkan_graphics_pipeline.h"
 #include "vulkan_uniform_buffer.h"
+#include "vulkan_image.h"
 
 #include "../platform.h"
 
@@ -40,12 +41,15 @@ void create_instance(vulkan_data* data)
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_info.pApplicationInfo = &appInfo;
     create_info.enabledLayerCount = 0;
-    uint32_t num_extensions = 0;
-    auto ext = glfwGetRequiredInstanceExtensions(&num_extensions);
-    create_info.enabledExtensionCount = num_extensions;
-    create_info.ppEnabledExtensionNames = ext;
+
+    uint32_t numGlfwExt = 0;
+    auto glfwExt = glfwGetRequiredInstanceExtensions(&numGlfwExt);
+    std::vector<const char*> extensions(glfwExt, glfwExt + numGlfwExt);
 
 #ifndef NDEBUG
+    /* extensions */
+    extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+
     /* validation layers */
     const std::vector<const char*> validationLayers = {
         "VK_LAYER_LUNARG_standard_validation"
@@ -68,6 +72,9 @@ void create_instance(vulkan_data* data)
         throw std::runtime_error("Requested layer does not exist");
     }
 #endif
+
+    create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    create_info.ppEnabledExtensionNames = extensions.data();
 
     if (vkCreateInstance(&create_info, nullptr, &data->instance) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create vulkan instance");
@@ -510,15 +517,23 @@ void recreate_swap_chain(vulkan_data* data, GLFWwindow* window)
     create_swap_chain(data, width, height);
     create_swap_chain_image_views(data);
     create_render_pass(data);
-    for (size_t i = 0; i < data->registered_pipelines.size(); i++) {
-        auto p = data->registered_pipelines[i];
-        p->terminate(*data);
-        p->initialise(*data, data->render_pass);
-    }
     create_frame_buffers(data);
-    for (size_t i = 0; i < data->registered_command_buffers.size(); i++) {
-        data->registered_command_buffers[i]->recreate(*data);
+    for (graphics_pipeline* pipeline : data->registered_pipelines) {
+        pipeline->recreate(*data, data->render_pass);
     }
+    for (graphics_command_buffer* buffer : data->registered_command_buffers) {
+        buffer->recreate(*data);
+    }
+}
+
+void create_defaults(vulkan_data* data) {
+    data->default_image = new vulkan_image;
+    data->default_image->initialise_default(*data);
+}
+
+void terminate_defaults(vulkan_data& data) {
+    data.default_image->terminate(data);
+    delete data.default_image;
 }
 
 void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
@@ -550,12 +565,14 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     for (size_t i = 0; i < data->registered_command_buffers.size(); i++) {
         data->registered_command_buffers[i]->recreate(*data);
     }
+    create_defaults(data);
 }
 
 void terminate_vulkan(vulkan_data& data)
 {
     vkDeviceWaitIdle(data.logical_device);
 
+    terminate_defaults(data);
     cleanup_swap_chain(&data);
     vkDestroyCommandPool(data.logical_device, data.command_pool_graphics, nullptr);
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -624,8 +641,9 @@ void submit_command_buffers_graphics(vulkan_data& data, std::vector<VkCommandBuf
     submitInfo.pSignalSemaphores = signalSemaphores;
 
     vkResetFences(data.logical_device, 1, &data.in_flight_fences[data.current_frame]);
-    if (vkQueueSubmit(data.graphics_queue, 1, &submitInfo, data.in_flight_fences[data.current_frame]) != VK_SUCCESS) {
-        throw std::runtime_error("failed to submit draw command buffer!");
+    auto err = vkQueueSubmit(data.graphics_queue, 1, &submitInfo, data.in_flight_fences[data.current_frame]);
+    if (err != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit draw command buffer!  error id: " + std::to_string(err));
     }
 }
 
@@ -666,49 +684,41 @@ bool vector_contains(T value, std::vector<T>& vector, size_t* index)
     return false;
 }
 
+template <typename T>
+void register_struct(std::vector<T*>& registered_objs, T* obj)
+{
+    if (!vector_contains<T*>(obj, registered_objs, nullptr)) {
+        registered_objs.push_back(obj);
+    }
+}
+
+template <typename T>
+void unregister_struct(std::vector<T*>& registered_objs, T* obj)
+{
+    size_t index;
+    if (vector_contains<T*>(obj, registered_objs, &index)) {
+        registered_objs.erase(registered_objs.begin() + index);
+    }
+}
+
 void register_command_buffer(vulkan_data& data, graphics_command_buffer* buffer)
 {
-    if (!vector_contains<graphics_command_buffer*>(buffer, data.registered_command_buffers, nullptr)) {
-        data.registered_command_buffers.push_back(buffer);
-    }
+    register_struct<graphics_command_buffer>(data.registered_command_buffers, buffer);
 }
 
 void unregister_command_buffer(vulkan_data& data, graphics_command_buffer* buffer)
 {
-    size_t index;
-    if (vector_contains<graphics_command_buffer*>(buffer, data.registered_command_buffers, &index)) {
-        data.registered_command_buffers.erase(data.registered_command_buffers.begin() + index);
-    }
+    unregister_struct<graphics_command_buffer>(data.registered_command_buffers, buffer);
 }
 
 void register_pipeline(vulkan_data& data, graphics_pipeline* pipeline)
 {
-    if (!vector_contains<graphics_pipeline*>(pipeline, data.registered_pipelines, nullptr)) {
-        data.registered_pipelines.push_back(pipeline);
-    }
+    register_struct<graphics_pipeline>(data.registered_pipelines, pipeline);
 }
 
 void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline)
 {
-    size_t index;
-    if (vector_contains<graphics_pipeline*>(pipeline, data.registered_pipelines, &index)) {
-        data.registered_pipelines.erase(data.registered_pipelines.begin() + index);
-    }
-}
-
-void register_uniform_buffer(vulkan_data& data, uniform_buffer_base* uniform_buffer)
-{
-    if (!vector_contains<uniform_buffer_base*>(uniform_buffer, data.registered_uniform_buffers, nullptr)) {
-        data.registered_uniform_buffers.push_back(uniform_buffer);
-    }
-}
-
-void unregister_uniform_buffer(vulkan_data& data, uniform_buffer_base* uniform_buffer)
-{
-    size_t index;
-    if (vector_contains<uniform_buffer_base*>(uniform_buffer, data.registered_uniform_buffers, &index)) {
-        data.registered_uniform_buffers.erase(data.registered_uniform_buffers.begin() + index);
-    }
+    register_struct<graphics_pipeline>(data.registered_pipelines, pipeline);
 }
 
 void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, VkDeviceSize byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage)

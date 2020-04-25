@@ -2,29 +2,37 @@
 #include "vulkan_base.h"
 #include "vulkan_image.h"
 
+struct uniform_info
+{
+    enum Type {
+        UNIFORM_BUFFER,
+        SAMPLER_BUFFER
+    } type;
+    uint32_t binding = 0;
+    union {
+        VkDescriptorBufferInfo bufferInfo;
+        VkDescriptorImageInfo imageInfo;
+    };
+};
+
 class uniform_buffer_base
 {
 private:
-    void create_descriptor_pool(vulkan_data& vkdata, uint32_t descriptor_count, uint32_t num_sets);
-    void create_descriptor_sets(vulkan_data& vkdata, uint32_t num_swap_chain_images);
+    friend class graphics_pipeline;
+
+    bool should_repopulate_descriptor_sets();
 
 protected:
-    uint32_t uniform_binding{};
-    VkDescriptorSetLayout set_layout{};
+    uint32_t uniform_binding = 0;
+    bool shouldRepopulateDescSets = true;
 
-    VkDescriptorPool descriptor_pool{};
-    std::vector<VkDescriptorSet> descriptor_sets;
-
-    virtual void virtual_initialise(vulkan_data& vk_data, uint32_t binding, VkDescriptorSetLayout descriptor_set_layout) {};
+    virtual void virtual_initialise(vulkan_data& vk_data, uint32_t binding) {};
     virtual void virtual_terminate(vulkan_data& vk_data) {};
-    virtual VkDescriptorPoolSize gen_descriptor_pool_size(vulkan_data& data) const = 0;
-    virtual void populate_descriptor_sets(vulkan_data &vkdata) = 0;
+    virtual uniform_info get_uniform_info(size_t index) = 0;
 
 public:
-    void initialise(vulkan_data& vk_data, uint32_t binding, VkDescriptorSetLayout descriptor_set_layout);
+    void initialise(vulkan_data& vk_data, uint32_t binding);
     void terminate(vulkan_data& vk_data);
-    void recreate_descriptor_sets(vulkan_data& data, VkDescriptorSetLayout& descriptor_set_layout);
-    std::vector<VkDescriptorSet>& get_descriptor_sets();
 
 };
 
@@ -38,7 +46,7 @@ private:
     std::vector<VmaAllocation> allocations;
 
 protected:
-    void virtual_initialise(vulkan_data& vk_data, uint32_t binding, VkDescriptorSetLayout descriptor_set_layout) final {
+    void virtual_initialise(vulkan_data& vk_data, uint32_t binding) final {
         VkDeviceSize buffer_size = sizeof(T);
         size_t num_swap_chain_images = vk_data.swap_chain_data.images.size();
         uniform_buffers.resize(num_swap_chain_images);
@@ -55,33 +63,15 @@ protected:
         }
     }
 
-    VkDescriptorPoolSize gen_descriptor_pool_size(vulkan_data& data) const final {
-        VkDescriptorPoolSize poolSize = {};
-        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize.descriptorCount = static_cast<uint32_t>(data.swap_chain_data.images.size());
-        return poolSize;
-    }
+    uniform_info get_uniform_info(size_t index) final {
+        uniform_info info{};
+        info.type = uniform_info::UNIFORM_BUFFER;
+        info.binding = this->uniform_binding;
 
-    void populate_descriptor_sets(vulkan_data &vkdata) final {
-        for (size_t i = 0; i < vkdata.swap_chain_data.images.size(); i++) {
-            VkDescriptorBufferInfo bufferInfo = {};
-            bufferInfo.buffer = this->uniform_buffers[i];
-            bufferInfo.offset = 0;
-            bufferInfo.range = sizeof(T);
-
-            VkWriteDescriptorSet descriptorWrite = {};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet = descriptor_sets[i];
-            descriptorWrite.dstBinding = this->uniform_binding;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo = &bufferInfo;
-            descriptorWrite.pImageInfo = nullptr; // Optional
-            descriptorWrite.pTexelBufferView = nullptr; // Optional
-
-            vkUpdateDescriptorSets(vkdata.logical_device, 1, &descriptorWrite, 0, nullptr);
-        }
+        info.bufferInfo.buffer = this->uniform_buffers[index];
+        info.bufferInfo.offset = 0;
+        info.bufferInfo.range = sizeof(T);
+        return info;
     }
 
 public:
@@ -106,34 +96,26 @@ private:
     vulkan_sampler sampler_data{};
 
 protected:
-    VkDescriptorPoolSize gen_descriptor_pool_size(vulkan_data& data) const final {
-        VkDescriptorPoolSize poolSize = {};
-        poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSize.descriptorCount = static_cast<uint32_t>(data.swap_chain_data.images.size());
-        return poolSize;
-    };
+    void virtual_initialise(vulkan_data& vk_data, uint32_t binding) final {
+        image_view_data.initialise(vk_data, *vk_data.default_image);
+        sampler_data.initialise(vk_data);
+    }
 
-    void populate_descriptor_sets(vulkan_data &vkdata) final {
-        for (size_t i = 0; i < vkdata.swap_chain_data.images.size(); i++) {
-            VkDescriptorImageInfo imageInfo{};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = this->image_view_data.imageView;
-            imageInfo.sampler = this->sampler_data.sampler;
+    void virtual_terminate(vulkan_data& data) final {
+        image_view_data.terminate(data);
+        sampler_data.terminate(data);
+    }
 
-            VkWriteDescriptorSet descriptorWrite = {};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet = descriptor_sets[i];
-            descriptorWrite.dstBinding = this->uniform_binding;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo = nullptr;
-            descriptorWrite.pImageInfo = &imageInfo; // Optional
-            descriptorWrite.pTexelBufferView = nullptr; // Optional
+    uniform_info get_uniform_info(size_t index) final {
+        uniform_info info{};
+        info.type = uniform_info::SAMPLER_BUFFER;
+        info.binding = this->uniform_binding;
 
-            vkUpdateDescriptorSets(vkdata.logical_device, 1, &descriptorWrite, 0, nullptr);
-        }
-    };
+        info.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        info.imageInfo.imageView = this->image_view_data.imageView;
+        info.imageInfo.sampler = this->sampler_data.sampler;
+        return info;
+    }
 
 public:
     inline vulkan_image_view& image_view() {
@@ -145,6 +127,6 @@ public:
     }
 
     void update_buffer(vulkan_data& vk_data) {
-        this->populate_descriptor_sets(vk_data);
+        this->shouldRepopulateDescSets = true;
     }
 };

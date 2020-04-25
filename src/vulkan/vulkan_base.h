@@ -8,6 +8,8 @@
 class graphics_command_buffer;
 class graphics_pipeline;
 class uniform_buffer_base;
+struct vulkan_image;
+struct vulkan_image_view;
 
 #define MAX_FRAMES_IN_FLIGHT 2
 struct vulkan_data
@@ -36,8 +38,9 @@ struct vulkan_data
     uint32_t current_frame = 0;
     std::vector<graphics_command_buffer*> registered_command_buffers;
     std::vector<graphics_pipeline*> registered_pipelines;
-    std::vector<uniform_buffer_base*> registered_uniform_buffers;
+    std::vector<vulkan_image_view*> registered_image_views;
     VmaAllocator mem_allocator;
+    vulkan_image* default_image;
 };
 
 enum class shader_type {
@@ -58,8 +61,6 @@ void register_command_buffer(vulkan_data& data, graphics_command_buffer* buffer)
 void unregister_command_buffer(vulkan_data& data, graphics_command_buffer* buffer);
 void register_pipeline(vulkan_data& data, graphics_pipeline* pipeline);
 void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline);
-void register_uniform_buffer(vulkan_data& data, uniform_buffer_base* uniform_buffer);
-void unregister_uniform_buffer(vulkan_data& data, uniform_buffer_base* uniform_buffer);
 
 void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, VkDeviceSize byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
 void fill_buffer(vulkan_data& vkdata, VmaAllocation& alloc, size_t data_length, void* data_start);

@@ -11,7 +11,11 @@ struct vulkan_image
     VkFormat format;
 
     void initialise(vulkan_data& vkdata, const std::string& abs_file_path);
+    void initialise_default(vulkan_data& data);
     void terminate(vulkan_data& vkdata);
+
+private:
+    void initialise_with_staging_buffer(vulkan_data& data, VkBuffer* stagingBuffer, VmaAllocation* stagingAllocation, uint32_t texWidth, uint32_t texHeight);
 };
 
 struct vulkan_image_view

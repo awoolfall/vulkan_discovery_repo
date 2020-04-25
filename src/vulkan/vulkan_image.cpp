@@ -93,6 +93,34 @@ void vulkan_image::initialise(vulkan_data &vkdata, const std::string &abs_file_p
 
     stbi_image_free(pixels);
 
+    this->initialise_with_staging_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, texWidth, texHeight);
+
+    // cleanup
+    vmaDestroyBuffer(vkdata.mem_allocator, stagingBuffer, stagingBufferAlloc);
+}
+
+void vulkan_image::terminate(vulkan_data &vkdata) {
+    vmaDestroyImage(vkdata.mem_allocator, this->image, this->allocation);
+}
+
+void vulkan_image::initialise_default(vulkan_data &vkdata) {
+    this->format = VK_FORMAT_R8G8B8A8_SRGB;
+    // 1 by 1 pink square
+    unsigned char pixels[4] = {255, 0, 255, 255};
+
+    VkBuffer stagingBuffer;
+    VmaAllocation stagingBufferAlloc;
+    create_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    fill_buffer(vkdata, stagingBufferAlloc, (size_t)4, &pixels);
+
+    this->initialise_with_staging_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, 1, 1);
+
+    // cleanup
+    vmaDestroyBuffer(vkdata.mem_allocator, stagingBuffer, stagingBufferAlloc);
+}
+
+void vulkan_image::initialise_with_staging_buffer(vulkan_data &vkdata, VkBuffer *stagingBuffer,
+                                                  VmaAllocation *stagingAllocation, uint32_t texWidth, uint32_t texHeight) {
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -152,7 +180,7 @@ void vulkan_image::initialise(vulkan_data &vkdata, const std::string &abs_file_p
 
     vkCmdCopyBufferToImage(
             commandBuffer,
-            stagingBuffer,
+            *stagingBuffer,
             this->image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             1,
@@ -174,13 +202,6 @@ void vulkan_image::initialise(vulkan_data &vkdata, const std::string &abs_file_p
 
     // transition image layout to shader optimal
     transition_image_layout(vkdata, this->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    // cleanup
-    vmaDestroyBuffer(vkdata.mem_allocator, stagingBuffer, stagingBufferAlloc);
-}
-
-void vulkan_image::terminate(vulkan_data &vkdata) {
-    vmaDestroyImage(vkdata.mem_allocator, this->image, this->allocation);
 }
 
 
@@ -204,7 +225,6 @@ void vulkan_image_view::initialise(vulkan_data &vkdata, vulkan_image &image) {
 void vulkan_image_view::terminate(vulkan_data &vkdata) {
     vkDestroyImageView(vkdata.logical_device, this->imageView, nullptr);
 }
-
 
 void vulkan_sampler::initialise(vulkan_data &vkdata) {
     VkSamplerCreateInfo samplerInfo = {};

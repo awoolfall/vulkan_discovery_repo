@@ -75,17 +75,26 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    vulkan_image image{};
+    image.initialise(vkdata, to_absolute_path("res/images/texture.jpg"));
+
     basic_pipeline basic_p;
     basic_p.initialise(vkdata, vkdata.render_pass);
 
-    auto basic_ubo = basic_p.new_mvp_ubo(vkdata);
-    basic_ubo.data().model = glm::mat4(1.0);
-    basic_ubo.data().view = glm::translate(glm::mat4(1.0), {0.0, 0.0, -5.0});
-    basic_ubo.data().proj = glm::perspective(
+    auto& basic_mvp = basic_p.mvp_uniform_buffer;
+    basic_mvp.data().model = glm::mat4(1.0);
+    basic_mvp.data().view = glm::translate(glm::mat4(1.0), {0.0, 0.0, -5.0});
+    basic_mvp.data().proj = glm::perspective(
             glm::radians(45.0f),
             vkdata.swap_chain_data.extent.width / (float) vkdata.swap_chain_data.extent.height,
             0.1f, 10.0f);
-    basic_ubo.update_buffer(vkdata);
+    basic_mvp.update_buffer(vkdata);
+
+    auto& basic_sampler = basic_p.sampler_buffer;
+    basic_sampler.sampler().initialise(vkdata);
+    basic_sampler.image_view().initialise(vkdata, image);
+    basic_sampler.update_buffer(vkdata);
+    basic_p.populate_descriptor_sets(vkdata);
 
     std::vector<basic_pipeline::vertex> vert_data = {
             {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
@@ -94,7 +103,7 @@ int main(int argc, char** argv)
             {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
     };
 
-    std::vector<uint32_t> index_data = {0, 1, 2, 0, 2, 3};
+    std::vector<uint32_t> index_data = {0, 1, 2, 0, 2, 3};;
 
     dynamic_buffer<basic_pipeline::vertex> buffer;
     buffer.initialise(vkdata, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vert_data.size());
@@ -107,7 +116,6 @@ int main(int argc, char** argv)
     cmd.pipeline = &basic_p;
     cmd.vert_buffer = &buffer;
     cmd.index_buffer = &i_buf;
-    cmd.uniform_buffers = &basic_ubo;
     cmd.initialise(vkdata);
 
     glm::vec3 cameraPos = {0.0, 0.0, 0.0};
@@ -115,6 +123,12 @@ int main(int argc, char** argv)
 
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+        // update projection
+        basic_mvp.data().proj = glm::perspective(
+                glm::radians(45.0f),
+                vkdata.swap_chain_data.extent.width / (float) vkdata.swap_chain_data.extent.height,
+                0.1f, 10.0f);
 
         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2)) {
             if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) {
@@ -127,10 +141,10 @@ int main(int argc, char** argv)
                 cameraRot.y += (float)glm::radians(-cursorY/2.0);
                 cameraRot.x += (float)glm::radians(cursorX/2.0);
 
-                basic_ubo.data().view = glm::translate(glm::mat4(1.0), {0.0, 0.0, -5.0});
-                basic_ubo.data().view = glm::rotate(basic_ubo.data().view, cameraRot.y, {1, 0, 0});
-                basic_ubo.data().view = glm::rotate(basic_ubo.data().view, cameraRot.x, {0, 1, 0});
-                basic_ubo.data().view = glm::translate(basic_ubo.data().view, cameraPos);
+                basic_mvp.data().view = glm::translate(glm::mat4(1.0), {0.0, 0.0, -5.0});
+                basic_mvp.data().view = glm::rotate(basic_mvp.data().view, cameraRot.y, {1, 0, 0});
+                basic_mvp.data().view = glm::rotate(basic_mvp.data().view, cameraRot.x, {0, 1, 0});
+                basic_mvp.data().view = glm::translate(basic_mvp.data().view, cameraPos);
             }
             glfwSetCursorPos(window, 0.0, 0.0);
         } else {
@@ -139,13 +153,13 @@ int main(int argc, char** argv)
         }
 
         buffer.fill_buffer(vkdata, vert_data);
-        basic_ubo.update_buffer(vkdata);
+        basic_mvp.update_buffer(vkdata);
 
         submit_command_buffers_graphics(vkdata, cmd.cmd_buffers());
         present_frame(vkdata);
     }
 
-    basic_ubo.terminate(vkdata);
+    image.terminate(vkdata);
     buffer.terminate(vkdata);
     i_buf.terminate(vkdata);
     cmd.terminate(vkdata);
