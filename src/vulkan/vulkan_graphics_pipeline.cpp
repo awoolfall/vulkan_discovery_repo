@@ -220,11 +220,6 @@ VkDescriptorSet &graphics_pipeline::get_descriptor_set(size_t index) {
     return this->descriptorSets[index];
 }
 
-void graphics_pipeline::recreate(vulkan_data &vkdata, VkRenderPass input_render_pass) {
-    this->terminate_routine(vkdata);
-    this->initialise_routine(vkdata, input_render_pass);
-}
-
 void graphics_pipeline::initialise_routine(vulkan_data &vkdata, VkRenderPass input_render_pass) {
     std::vector<VkVertexInputBindingDescription> binding_descriptions; std::vector<VkVertexInputAttributeDescription> attrib_descriptions;
     this->gen_vertex_input_info(vkdata, &binding_descriptions, &attrib_descriptions);
@@ -370,6 +365,25 @@ void graphics_pipeline::terminate_routine(vulkan_data &vkdata) {
     vkDestroyDescriptorPool(vkdata.logical_device, this->descriptorPool, nullptr);
 
     this->clear_shader_stages(vkdata);
+}
+
+void graphics_pipeline::reinitialise(vulkan_data &vkdata, VkRenderPass input_render_pass) {
+    for (auto& decl : this->uniformBufferDecls) {
+        if (decl.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+            decl.buffer->initialise(vkdata, decl.binding);
+        }
+    }
+    this->initialise_routine(vkdata, input_render_pass);
+}
+
+void graphics_pipeline::reterminate(vulkan_data &vkdata) {
+    this->terminate_routine(vkdata);
+    // terminate all uniform buffer ubos
+    for (auto& decl : this->uniformBufferDecls) {
+        if (decl.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+            decl.buffer->terminate(vkdata);
+        }
+    }
 }
 
 VkPipelineShaderStageCreateInfo gen_shader_stage_info_from_spirv(vulkan_data& data, std::string abs_path, shader_type type, const char* entry_point)

@@ -93,7 +93,7 @@ int main(int argc, char** argv)
     auto& basic_sampler = basic_p.sampler_buffer;
     basic_sampler.sampler().initialise(vkdata);
     basic_sampler.image_view().initialise(vkdata, image);
-    basic_sampler.update_buffer(vkdata);
+    // @TODO: gotta repopulate the descriptor sets when we change an image_view. Should look into a way to do this automatically
     basic_p.populate_descriptor_sets(vkdata);
 
     std::vector<basic_pipeline::vertex> vert_data = {

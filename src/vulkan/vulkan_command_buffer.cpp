@@ -6,6 +6,12 @@ void graphics_command_buffer::initialise(vulkan_data& data)
     if (!this->command_buffers.empty()) {
         this->terminate(data);
     }
+    this->reinitialise(data);
+    register_command_buffer(data, this);
+}
+
+void graphics_command_buffer::reinitialise(vulkan_data& data)
+{
     this->command_buffers.resize(data.swap_chain_data.frame_buffers.size());
 
     /* allocate command buffers */
@@ -19,12 +25,6 @@ void graphics_command_buffer::initialise(vulkan_data& data)
         throw std::runtime_error("failed to allocate command buffers!");
     }
 
-    this->recreate(data);
-    register_command_buffer(data, this);
-}
-
-void graphics_command_buffer::recreate(vulkan_data& data)
-{
     /* record the commands into the command buffers */
     for (size_t i = 0; i < this->command_buffers.size(); i++) {
         VkCommandBufferBeginInfo beginInfo = {};
@@ -50,6 +50,13 @@ void graphics_command_buffer::terminate(vulkan_data& data)
     if (!command_buffers.empty()) {
         unregister_command_buffer(data, this);
         vkDeviceWaitIdle(data.logical_device);
+        vkFreeCommandBuffers(data.logical_device, data.command_pool_graphics, (uint32_t)this->command_buffers.size(), this->command_buffers.data());
+        this->command_buffers.clear();
+    }
+}
+
+void graphics_command_buffer::reterminate(vulkan_data &data) {
+    if (!command_buffers.empty()) {
         vkFreeCommandBuffers(data.logical_device, data.command_pool_graphics, (uint32_t)this->command_buffers.size(), this->command_buffers.data());
         this->command_buffers.clear();
     }

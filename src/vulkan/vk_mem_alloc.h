@@ -903,7 +903,7 @@ Setting VmaDefragmentationInfo2::pAllocationsChanged is optional.
 This output array tells whether particular allocation in VmaDefragmentationInfo2::pAllocations at the same index
 has been modified during defragmentation.
 You can pass null, but you then need to query every allocation passed to defragmentation
-for new parameters using vmaGetAllocationInfo() if you might need to recreate and rebind a buffer or image associated with it.
+for new parameters using vmaGetAllocationInfo() if you might need to reinitialise and rebind a buffer or image associated with it.
 
 If you use [Custom memory pools](@ref choosing_memory_type_custom_memory_pools),
 you can fill VmaDefragmentationInfo2::poolCount and VmaDefragmentationInfo2::pPools
@@ -1107,7 +1107,7 @@ void MyBuffer::EnsureBuffer()
         }
     }
 
-    // Buffer not yet exists or lost - destroy and recreate it.
+    // Buffer not yet exists or lost - destroy and reinitialise it.
 
     vmaDestroyBuffer(allocator, m_Buf, m_Alloc);
 
@@ -1463,7 +1463,7 @@ Create them in video memory that is fastest to access from GPU using
 
 Consider using [VK_KHR_dedicated_allocation](@ref vk_khr_dedicated_allocation) extension
 and/or manually creating them as dedicated allocations using #VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-especially if they are large or if you plan to destroy and recreate them e.g. when
+especially if they are large or if you plan to destroy and reinitialise them e.g. when
 display resolution changes.
 Prefer to create such resources first and all other GPU resources (like textures and vertex buffers) later.
 
@@ -1745,7 +1745,7 @@ Features deliberately excluded from the scope of this library:
   should be made manually, using `vkCreateBuffer()` and `vkAllocateMemory()`.
 - Recreation of buffers and images. Although the library has functions for
   buffer and image creation (vmaCreateBuffer(), vmaCreateImage()), you need to
-  recreate these objects yourself after defragmentation. That's because the big
+  reinitialise these objects yourself after defragmentation. That's because the big
   structures `VkBufferCreateInfo`, `VkImageCreateInfo` are not stored in
   #VmaAllocation object.
 - Handling CPU memory allocation failures. When dynamically creating small C++
@@ -3149,7 +3149,7 @@ typedef struct VmaDefragmentationInfo2 {
     All the allocations in the specified pools can be moved during defragmentation
     and there is no way to check if they were really moved as in `pAllocationsChanged`,
     so you must query all the allocations in all these pools for new `VkDeviceMemory`
-    and offset using vmaGetAllocationInfo() if you might need to recreate buffers
+    and offset using vmaGetAllocationInfo() if you might need to reinitialise buffers
     and images bound to them.
 
     The array should have `poolCount` elements.

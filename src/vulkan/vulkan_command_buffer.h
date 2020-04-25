@@ -14,7 +14,8 @@ public:
     VkCommandBufferLevel buffer_level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
     void initialise(vulkan_data& data);
-    void recreate(vulkan_data& data);
+    void reinitialise(vulkan_data& data);
+    void reterminate(vulkan_data& data);
     void terminate(vulkan_data& data);
     std::vector<VkCommandBuffer>& cmd_buffers() {return command_buffers;}
 

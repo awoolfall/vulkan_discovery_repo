@@ -512,17 +512,26 @@ void recreate_swap_chain(vulkan_data* data, GLFWwindow* window)
     glfwGetWindowSize(window, &width, &height);
 
     vkDeviceWaitIdle(data->logical_device);
+
+    // cleanup
+    for (graphics_command_buffer* buffer : data->registered_command_buffers) {
+        buffer->reterminate(*data);
+    }
+    for (graphics_pipeline* pipeline : data->registered_pipelines) {
+        pipeline->reterminate(*data);
+    }
     cleanup_swap_chain(data);
-    
+
+    // recreate
     create_swap_chain(data, width, height);
     create_swap_chain_image_views(data);
     create_render_pass(data);
     create_frame_buffers(data);
     for (graphics_pipeline* pipeline : data->registered_pipelines) {
-        pipeline->recreate(*data, data->render_pass);
+        pipeline->reinitialise(*data, data->render_pass);
     }
     for (graphics_command_buffer* buffer : data->registered_command_buffers) {
-        buffer->recreate(*data);
+        buffer->reinitialise(*data);
     }
 }
 
@@ -563,7 +572,7 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     }
     create_frame_buffers(data);
     for (size_t i = 0; i < data->registered_command_buffers.size(); i++) {
-        data->registered_command_buffers[i]->recreate(*data);
+        data->registered_command_buffers[i]->reinitialise(*data);
     }
     create_defaults(data);
 }
@@ -718,7 +727,7 @@ void register_pipeline(vulkan_data& data, graphics_pipeline* pipeline)
 
 void unregister_pipeline(vulkan_data& data, graphics_pipeline* pipeline)
 {
-    register_struct<graphics_pipeline>(data.registered_pipelines, pipeline);
+    unregister_struct<graphics_pipeline>(data.registered_pipelines, pipeline);
 }
 
 void create_buffer(vulkan_data& data, VkBuffer* buffer, VmaAllocation* allocation, VkDeviceSize byte_data_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage)

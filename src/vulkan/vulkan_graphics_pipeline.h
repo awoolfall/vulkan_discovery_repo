@@ -64,7 +64,8 @@ protected:
 public:
     void initialise(vulkan_data& vkdata, VkRenderPass input_render_pass);
     void terminate(vulkan_data& data);
-    void recreate(vulkan_data& vkdata, VkRenderPass input_render_pass);
+    void reinitialise(vulkan_data& vkdata, VkRenderPass input_render_pass);
+    void reterminate(vulkan_data& vkdata);
 
     void populate_descriptor_sets(vulkan_data& vkdata);
 
