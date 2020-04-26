@@ -146,7 +146,8 @@ void graphics_pipeline::terminate(vulkan_data& data)
     }
 }
 
-VkPipeline &graphics_pipeline::get_pipeline() {
+VkPipeline &graphics_pipeline::get_pipeline(vulkan_data& vkdata) {
+    this->populate_descriptor_sets(vkdata);
     return pipeline;
 }
 
@@ -331,6 +332,18 @@ void graphics_pipeline::initialise_routine(vulkan_data &vkdata, VkRenderPass inp
     viewportState.scissorCount = (uint32_t)scissors.size();
     viewportState.pScissors = scissors.data();
 
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_TRUE; // @TODO: out of order transparency?
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.minDepthBounds = 0.0f; // Optional
+    depthStencil.maxDepthBounds = 1.0f; // Optional
+    depthStencil.stencilTestEnable = VK_FALSE;
+    depthStencil.front = {};
+    depthStencil.back = {};
+
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = (uint32_t)this->shader_stages.size();
@@ -340,7 +353,7 @@ void graphics_pipeline::initialise_routine(vulkan_data &vkdata, VkRenderPass inp
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterization_state_info;
     pipelineInfo.pMultisampleState = &multisample_state_info;
-    pipelineInfo.pDepthStencilState = nullptr; // Optional @TODO
+    pipelineInfo.pDepthStencilState = &depthStencil; // Optional @TODO
     pipelineInfo.pColorBlendState = &color_blend_state_info;
     if (dynamic_states.empty()) {
         pipelineInfo.pDynamicState = nullptr;

@@ -93,17 +93,22 @@ int main(int argc, char** argv)
     auto& basic_sampler = basic_p.sampler_buffer;
     basic_sampler.sampler().initialise(vkdata);
     basic_sampler.image_view().initialise(vkdata, image);
-    // @TODO: gotta repopulate the descriptor sets when we change an image_view. Should look into a way to do this automatically
-    basic_p.populate_descriptor_sets(vkdata);
+    basic_sampler.update_buffer(vkdata);
 
     std::vector<basic_pipeline::vertex> vert_data = {
             {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
             {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
             {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
             {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+
+            {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+            {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+            {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+            {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
     };
 
-    std::vector<uint32_t> index_data = {0, 1, 2, 0, 2, 3};;
+    std::vector<uint32_t> index_data = {0, 1, 2, 2, 3, 0,
+                                        4, 5, 6, 6, 7, 4};
 
     dynamic_buffer<basic_pipeline::vertex> buffer;
     buffer.initialise(vkdata, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vert_data.size());

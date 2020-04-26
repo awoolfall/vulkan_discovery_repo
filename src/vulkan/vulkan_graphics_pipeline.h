@@ -69,7 +69,7 @@ public:
 
     void populate_descriptor_sets(vulkan_data& vkdata);
 
-    VkPipeline& get_pipeline();
+    VkPipeline& get_pipeline(vulkan_data& vkdata);
     VkPipelineLayout& get_pipeline_layout();
     VkDescriptorSet& get_descriptor_set(size_t index);
 };

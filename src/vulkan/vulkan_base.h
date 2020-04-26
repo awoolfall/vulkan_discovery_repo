@@ -31,6 +31,11 @@ struct vulkan_data
         VkFormat image_format;
         VkExtent2D extent;
     } swap_chain_data;
+    struct {
+        VkImage image;
+        VmaAllocation image_allocation;
+        VkImageView image_view;
+    } depth_resources;
     std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> image_available_sems;
     std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> render_finished_sems;
     std::array<VkFence, MAX_FRAMES_IN_FLIGHT> in_flight_fences;
