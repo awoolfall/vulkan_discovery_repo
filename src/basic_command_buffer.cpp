@@ -25,7 +25,7 @@ void triangle_cmd::fill_command_buffer(vulkan_data& data, size_t index)
     VkBuffer index_buffers[] = {this->index_buffer->get_vk_buffer()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(cmd_buffer(), 0, 1, vert_buffers, offsets);
-    vkCmdBindIndexBuffer(cmd_buffer(), this->index_buffer->get_vk_buffer(), 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(cmd_buffer(), this->index_buffer->get_vk_buffer(), 0, VK_INDEX_TYPE_UINT16);
 
     vkCmdBindDescriptorSets(cmd_buffer(),
                             VK_PIPELINE_BIND_POINT_GRAPHICS,

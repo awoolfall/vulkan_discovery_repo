@@ -8,9 +8,10 @@
 #include "src/vulkan/vulkan_graphics.h"
 #include "src/basic_pipeline.h"
 #include "src/basic_command_buffer.h"
-// #include "src/shader.h"
 #include "src/platform.h"
 #include "src/transform.h"
+#include "src/mesh.h"
+// #include "src/shader.h"
 
 #include <stdio.h>
 #include <iostream>
@@ -92,36 +93,45 @@ int main(int argc, char** argv)
 
     auto& basic_sampler = basic_p.sampler_buffer;
     basic_sampler.sampler().initialise(vkdata);
-    basic_sampler.image_view().initialise(vkdata, image);
+    //basic_sampler.image_view().initialise(vkdata, image);
     basic_sampler.update_buffer(vkdata);
 
-    std::vector<basic_pipeline::vertex> vert_data = {
-            {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-            {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-            {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-            {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+//    std::vector<basic_pipeline::vertex> vert_data = {
+//            {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+//            {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+//            {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+//            {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+//
+//            {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+//            {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+//            {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+//            {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+//    };
 
-            {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-            {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-            {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-            {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-    };
-
-    std::vector<uint32_t> index_data = {0, 1, 2, 2, 3, 0,
+    std::vector<uint16_t> index_data = {0, 1, 2, 2, 3, 0,
                                         4, 5, 6, 6, 7, 4};
+    mesh m;
+    m.initialise("res/models/car.gltf");
+    if (!m.is_valid()) {
+        throw std::runtime_error("Unable to load model... " + m.err);
+    }
+    auto vert_data = m.create_vertex_array(0);
+    auto ii = m.create_indicies_array(0);
 
-    dynamic_buffer<basic_pipeline::vertex> buffer;
+    dynamic_buffer<vertex> buffer;
     buffer.initialise(vkdata, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vert_data.size());
     buffer.fill_buffer(vkdata, vert_data);
 
-    static_buffer<uint32_t> i_buf;
-    i_buf.initialise(vkdata, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, index_data);
+    static_buffer<uint16_t> i_buf;
+    i_buf.initialise(vkdata, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, ii);
 
     triangle_cmd cmd;
     cmd.pipeline = &basic_p;
     cmd.vert_buffer = &buffer;
     cmd.index_buffer = &i_buf;
     cmd.initialise(vkdata);
+
+
 
     glm::vec3 cameraPos = {0.0, 0.0, 0.0};
     glm::vec3 cameraRot = {0.0, 0.0, 0.0};

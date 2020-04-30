@@ -867,4 +867,4 @@ void fill_buffer(vulkan_data& vkdata, VmaAllocation& alloc, size_t data_length, 
     vmaUnmapMemory(vkdata.mem_allocator, alloc);
 }
 
-/* https://vulkan-tutorial.com/en/Texture_mapping/Combined_image_sampler - Combined image sampler */
+/* https://vulkan-tutorial.com/en/Loading_models - Loading Models! */

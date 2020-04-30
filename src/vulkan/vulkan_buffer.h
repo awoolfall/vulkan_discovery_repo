@@ -94,7 +94,12 @@ public:
     void initialise(vulkan_data& data, VkBufferUsageFlagBits usage, size_t data_length)
     {
         this->max_size = data_length;
-        create_buffer(data, &buffer, &allocation, data_length, usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        create_buffer(data, &buffer, &allocation, data_length * sizeof(T), usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    }
+
+    void fill_buffer(vulkan_data& vkdata, void* data)
+    {
+        ::fill_buffer(vkdata, allocation, this->max_size * sizeof(T), data);
     }
 
     void fill_buffer(vulkan_data& vkdata, std::vector<T> data)
