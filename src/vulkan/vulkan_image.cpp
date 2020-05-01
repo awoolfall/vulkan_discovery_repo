@@ -76,21 +76,36 @@ void transition_image_layout(vulkan_data& vkdata, VkImage image, VkImageLayout o
     vkFreeCommandBuffers(vkdata.logical_device, vkdata.command_pool_graphics, 1, &commandBuffer);
 }
 
-void vulkan_image::initialise(vulkan_data &vkdata, const std::string &abs_file_path) {
-    this->format = VK_FORMAT_R8G8B8A8_SRGB;
+void vulkan_image::initialise(vulkan_data& vkdata, const unsigned char* data, size_t data_length) {
     int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load(abs_file_path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load_from_memory(data, data_length, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
-
     if (!pixels) {
         throw std::runtime_error("failed to load texture image!");
     }
-
     VkBuffer stagingBuffer;
     VmaAllocation stagingBufferAlloc;
     create_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
     fill_buffer(vkdata, stagingBufferAlloc, (size_t)imageSize, pixels);
+    stbi_image_free(pixels);
 
+    this->initialise_with_staging_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, texWidth, texHeight);
+
+    // cleanup
+    vmaDestroyBuffer(vkdata.mem_allocator, stagingBuffer, stagingBufferAlloc);
+}
+
+void vulkan_image::initialise(vulkan_data& vkdata, std::string abs_file_path) {
+    int texWidth, texHeight, texChannels;
+    stbi_uc* pixels = stbi_load(abs_file_path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    VkDeviceSize imageSize = texWidth * texHeight * 4;
+    if (!pixels) {
+        throw std::runtime_error("failed to load texture image!");
+    }
+    VkBuffer stagingBuffer;
+    VmaAllocation stagingBufferAlloc;
+    create_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    fill_buffer(vkdata, stagingBufferAlloc, (size_t)imageSize, pixels);
     stbi_image_free(pixels);
 
     this->initialise_with_staging_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, texWidth, texHeight);
@@ -104,7 +119,6 @@ void vulkan_image::terminate(vulkan_data &vkdata) {
 }
 
 void vulkan_image::initialise_default(vulkan_data &vkdata) {
-    this->format = VK_FORMAT_R8G8B8A8_SRGB;
     // 1 by 1 pink square
     unsigned char pixels[4] = {255, 0, 255, 255};
 

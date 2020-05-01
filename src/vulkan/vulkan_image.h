@@ -8,9 +8,10 @@ struct vulkan_image
 {
     VkImage image;
     VmaAllocation allocation;
-    VkFormat format;
+    static const VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
-    void initialise(vulkan_data& vkdata, const std::string& abs_file_path);
+    void initialise(vulkan_data& vkdata, const unsigned char* data, size_t data_length);
+    void initialise(vulkan_data& vkdata, std::string abs_file_path);
     void initialise_default(vulkan_data& data);
     void terminate(vulkan_data& vkdata);
 

@@ -3,6 +3,7 @@
 
 #include <glm/glm.hpp>
 #include <include/tiny_gltf.h>
+#include "vulkan/vulkan_image.h"
 
 struct vertex {
     glm::vec3 position = glm::vec3(0.0);
@@ -11,6 +12,7 @@ struct vertex {
 };
 
 struct mesh {
+    std::string relative_path = "";
     tinygltf::TinyGLTF loader;
     tinygltf::Model model;
     std::string err;
@@ -24,7 +26,8 @@ struct mesh {
     uint32_t get_num_primitives(uint32_t mesh_index) const;
 
     std::vector<vertex> create_vertex_array(uint32_t mesh_index) const;
-    std::vector<uint16_t> create_indicies_array(uint32_t mesh_index) const;
+    std::vector<uint32_t> create_indicies_array(uint32_t mesh_index) const;
+    vulkan_image create_color_tex(vulkan_data& data, uint32_t mesh_index) const;
 };
 
 
