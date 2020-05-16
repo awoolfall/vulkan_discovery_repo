@@ -1,9 +1,9 @@
 #include "vulkan_uniform_buffer.h"
 
 void
-uniform_buffer_base::initialise(vulkan_data &vk_data, uint32_t binding) {
+uniform_buffer_base::initialise(vulkan_data &vkdata, uint32_t binding) {
     this->uniform_binding = binding;
-    this->virtual_initialise(vk_data, binding);
+    this->virtual_initialise(vkdata, binding);
     this->shouldRepopulateDescSets = true;
 }
 

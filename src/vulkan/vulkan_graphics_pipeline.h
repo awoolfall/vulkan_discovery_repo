@@ -36,21 +36,10 @@ protected:
 
     static VkDescriptorSetLayoutBinding create_descriptor_set_binding(uint32_t binding, VkDescriptorType descriptor_type, VkShaderStageFlags stages);
 
-    /**
-     * an abstract function where vertex input info is generated
-     * @param data                      the vulkan context
-     * @param binding_descriptions      a return vector to fill with binding descriptions
-     * @param attrib_descriptions       a return vector to fill with attribute descriptions
-     */
     virtual void gen_vertex_input_info(
             vulkan_data& data,
             std::vector<VkVertexInputBindingDescription>* binding_descriptions,
             std::vector<VkVertexInputAttributeDescription>* attrib_descriptions) = 0;
-    /**
-     * virtual function to define vulkan pipeline assembly state information
-     * @param data the vulkan context
-     * @return VkPipelineInputAssemblyStateCreateInfo
-     */
     virtual VkPipelineInputAssemblyStateCreateInfo gen_input_assembly_info(vulkan_data& data);
     virtual std::vector<VkViewport> gen_viewport(vulkan_data& data);
     virtual std::vector<VkRect2D> gen_scissor(vulkan_data& data);

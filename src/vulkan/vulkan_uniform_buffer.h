@@ -31,7 +31,7 @@ protected:
     virtual uniform_info get_uniform_info(size_t index) = 0;
 
 public:
-    void initialise(vulkan_data& vk_data, uint32_t binding);
+    void initialise(vulkan_data &vkdata, uint32_t binding);
     void terminate(vulkan_data& vk_data);
 
 };

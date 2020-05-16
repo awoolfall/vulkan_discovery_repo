@@ -660,14 +660,8 @@ void initialise_vulkan(vulkan_data* data, GLFWwindow* window)
     create_swap_chain(data, width, height);
     create_swap_chain_image_views(data);
     create_render_pass(data);
-//    for (size_t i = 0; i < data->registered_pipelines.size(); i++) {
-//        data->registered_pipelines[i]->initialise(*data, data->render_pass);
-//    }
     create_depth_resources(data);
     create_frame_buffers(data);
-//    for (size_t i = 0; i < data->registered_command_buffers.size(); i++) {
-//        data->registered_command_buffers[i]->reinitialise(*data);
-//    }
     create_defaults(data);
 }
 

@@ -2,6 +2,10 @@
 
 void graphics_command_buffer::initialise(vulkan_data& data)
 {
+    /* initialise const cmd buffer variables from virtual functions */
+    this->flags = this->get_flags();
+    this->buffer_level = this->get_buffer_level();
+
     /* if it has already been initialised, then terminate to reinitialise */
     if (!this->command_buffers.empty()) {
         this->terminate(data);
@@ -60,4 +64,12 @@ void graphics_command_buffer::reterminate(vulkan_data &data) {
         vkFreeCommandBuffers(data.logical_device, data.command_pool_graphics, (uint32_t)this->command_buffers.size(), this->command_buffers.data());
         this->command_buffers.clear();
     }
+}
+
+VkCommandBufferLevel graphics_command_buffer::get_buffer_level() const {
+    return VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+}
+
+uint32_t graphics_command_buffer::get_flags() const {
+    return 0x00;
 }
