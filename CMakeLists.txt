@@ -4,8 +4,6 @@ project(discovery)
 
 find_package(Vulkan REQUIRED)
 
-add_library(glad vendor/include/glad/glad.c)
-
 set(BUILD_SHARED_LIBS OFF)
 set(GLFW_BUILD_EXAMPLES OFF)
 set(GLFW_BUILD_TESTS OFF)
@@ -45,7 +43,6 @@ target_include_directories(discovery PRIVATE
 )
 
 target_link_libraries(discovery_lib 
-    glad
     glfw
     ${Vulkan_LIBRARIES}
 )
