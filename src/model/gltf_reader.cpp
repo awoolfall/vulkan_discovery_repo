@@ -141,6 +141,12 @@ vulkan_image gltf_reader::create_color_tex(vulkan_data& vkdata, uint32_t mesh_in
     }
 }
 
+void flatten(std::vector<node_3d>& nodes, node_3d* node, glm::mat4 parent_transform) {
+    node->transform = parent_transform * node->transform;
+    for (int child : node->children_nodes)
+        flatten(nodes, &nodes[child], node->transform);
+}
+
 std::vector<node_3d> gltf_reader::load_nodes() const {
     std::vector<node_3d> nodes;
     nodes.reserve(impl->model.nodes.size());
@@ -168,5 +174,6 @@ std::vector<node_3d> gltf_reader::load_nodes() const {
         }
         nodes.push_back(n);
     }
+    flatten(nodes, &nodes[0], glm::mat4(1.0));
     return nodes;
 }

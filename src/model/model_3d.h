@@ -10,7 +10,7 @@ struct model_3d {
     bool is_loaded = false;
     std::vector<mesh_3d> meshes;
     std::vector<node_3d> nodes;
-    gltf_reader gltf;
+    gltf_reader reader;
 
     void initialise_gltf(vulkan_data& data, const std::string& rel_path);
     void load_model(vulkan_data& data);

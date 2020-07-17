@@ -1,10 +1,10 @@
 #include "model_3d.h"
 
 void model_3d::initialise_gltf(vulkan_data& vkdata, const std::string& rel_path) {
-    this->gltf.initialise(rel_path);
+    this->reader.initialise(rel_path);
 
     // initialise model nodes
-    this->nodes = this->gltf.load_nodes();
+    this->nodes = this->reader.load_nodes();
 }
 
 void model_3d::terminate(vulkan_data &data) {
@@ -18,15 +18,15 @@ void model_3d::load_model(vulkan_data &data) {
         throw std::runtime_error("Attempted to load model which is already loaded");
     }
 
-    auto num = this->gltf.get_num_meshes();
+    auto num = this->reader.get_num_meshes();
     this->meshes.resize(num);
 
     for (size_t i = 0; i < num; i++) {
-        auto vertex_array = this->gltf.create_vertex_array(i);
+        auto vertex_array = this->reader.create_vertex_array(i);
         this->meshes[i].vertex_buffer.initialise(data, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vertex_array);
-        auto index_array = this->gltf.create_indicies_array(i);
+        auto index_array = this->reader.create_indicies_array(i);
         this->meshes[i].index_buffer.initialise(data, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, index_array);
-        this->meshes[i].color_texture = this->gltf.create_color_tex(data, i);
+        this->meshes[i].color_texture = this->reader.create_color_tex(data, i);
     }
 
     for (auto& node : this->nodes) {

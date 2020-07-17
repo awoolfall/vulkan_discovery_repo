@@ -4,6 +4,10 @@
 #include "vulkan/vulkan_command_buffer.h"
 #include "basic_pipeline.h"
 
+struct render_obj {
+    
+};
+
 class triangle_cmd : public graphics_command_buffer
 {
 protected:

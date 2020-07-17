@@ -32,6 +32,7 @@ struct node_3d {
     inline bool has_mesh() const {return mesh_index >= 0;}
 };
 
+
 class gltf_reader {
 private:
     struct Impl; Impl* impl;

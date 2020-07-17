@@ -12,9 +12,7 @@
 #include "src/transform.h"
 #include "model/gltf_reader.h"
 #include "model/model_3d.h"
-// #include "src/shader.h"
 
-#include <stdio.h>
 #include <iostream>
 
 const float quad_verticies[18] = {
@@ -118,7 +116,7 @@ int main(int argc, char** argv)
             glm::radians(60.0f),
             vkdata.swap_chain_data.extent.width / (float) vkdata.swap_chain_data.extent.height,
             0.1f, 10000.0f));
-    m3d.set_view(vkdata, glm::translate(glm::mat4(1.0), {0.0, 0.0, -800.0}));
+    m3d.set_view(vkdata, glm::translate(glm::mat4(1.0), {0.0, 0.0, -4.0}));
 
     gltf_reader m;
     m.initialise("res/models/pony/scene.gltf");
@@ -172,10 +170,10 @@ int main(int argc, char** argv)
                 cameraRot.y += (float)glm::radians(-cursorY/2.0);
                 cameraRot.x += (float)glm::radians(cursorX/2.0);
                 
-                glm::mat4 v = glm::translate(glm::mat4(1.0), {0.0, 0.0, -800.0});
-                v = glm::rotate(basic_mvp.data().view, cameraRot.y, {1, 0, 0});
-                v = glm::rotate(basic_mvp.data().view, cameraRot.x, {0, 1, 0});
-                v = glm::translate(basic_mvp.data().view, cameraPos);
+                glm::mat4 v = glm::translate(glm::mat4(1.0), {0.0, 0.0, -4.0});
+                v = glm::rotate(v, cameraRot.y, {1, 0, 0});
+                v = glm::rotate(v, cameraRot.x, {0, 1, 0});
+                v = glm::translate(v, cameraPos);
                 m3d.set_view(vkdata, v);
             }
             glfwSetCursorPos(window, 0.0, 0.0);
