@@ -4,125 +4,60 @@
 
 class buffer_base
 {
+protected:
+    bool is_static = false;
+    VkBuffer buffer{};
+    VmaAllocation allocation{};
+    size_t max_byte_size = 0;
+
 public:
-    virtual VkBuffer& get_vk_buffer() = 0;
-    virtual size_t get_count() = 0;
+    void initialise_static(vulkan_data& data, VkBufferUsageFlagBits usage, void* vertex_data, size_t byte_size);
+    void initialise_dynamic(vulkan_data& data, VkBufferUsageFlagBits usage, size_t byte_size);
+    void terminate(vulkan_data& data);
+
+    bool fill_buffer(vulkan_data& vkdata, void* data, size_t byte_size);
+
+    VkBuffer get_vk_buffer() const;
+    size_t byte_size() const;
 };
 
 template <typename T>
 class static_buffer : public buffer_base
 {
-private:
-    VkBuffer buffer{};
-    VmaAllocation allocation{};
-    size_t size = 0;
-
-    static void copy_buffer(vulkan_data& data, VkBuffer src_buffer, VkBuffer dst_buffer, size_t data_size)
-    {
-        VkCommandBufferAllocateInfo allocInfo = {};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = data.command_pool_graphics;
-        allocInfo.commandBufferCount = 1;
-
-        VkCommandBuffer cmd;
-        vkAllocateCommandBuffers(data.logical_device, &allocInfo, &cmd);
-
-        VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(cmd, &beginInfo);
-        VkBufferCopy copyRegion = {};
-        copyRegion.srcOffset = 0; // Optional
-        copyRegion.dstOffset = 0; // Optional
-        copyRegion.size = data_size;
-        vkCmdCopyBuffer(cmd, src_buffer, dst_buffer, 1, &copyRegion);
-        vkEndCommandBuffer(cmd);
-
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &cmd;
-
-        vkQueueSubmit(data.graphics_queue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(data.graphics_queue);
-
-        vkFreeCommandBuffers(data.logical_device, data.command_pool_graphics, 1, &cmd);
-    }
+protected:
+    size_t count = 0;
 
 public:
-    void initialise(vulkan_data& data, VkBufferUsageFlagBits usage, std::vector<T> vertex_data)
+    void initialise(vulkan_data& data, VkBufferUsageFlagBits usage, std::vector<T> input_data)
     {
-        this->size = vertex_data.size();
-        size_t byte_size = (vertex_data.size() * sizeof(T));
-        create_buffer(data, &buffer, &allocation, byte_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage, VMA_MEMORY_USAGE_GPU_ONLY);
-        VkBuffer staging_buffer; VmaAllocation staging_allocation;
-        create_buffer(data, &staging_buffer, &staging_allocation, byte_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-        fill_buffer(data, staging_allocation, vertex_data);
-        copy_buffer(data, staging_buffer, buffer, byte_size);
-        vmaDestroyBuffer(data.mem_allocator, staging_buffer, staging_allocation);
+        this->count = input_data.size();
+        this->initialise_static(data, usage, input_data.data(), input_data.size() * sizeof(T));
     }
 
-    void terminate(vulkan_data& data)
-    {
-        vkDeviceWaitIdle(data.logical_device);
-        vmaDestroyBuffer(data.mem_allocator, buffer, allocation);
-    }
-
-    VkBuffer& get_vk_buffer() final
-    {
-        return buffer;
-    }
-
-    size_t get_count() final
-    {
-        return this->size;
+    size_t get_count() const {
+        return this->count; 
     }
 };
 
 template <typename T>
 class dynamic_buffer : public buffer_base
 {
-private:
-    VkBuffer buffer{};
-    VmaAllocation allocation{};
-    size_t max_size = 0;
-    size_t size = 0;
+protected:
+    size_t count = 0;
 
 public:
     void initialise(vulkan_data& data, VkBufferUsageFlagBits usage, size_t data_length)
     {
-        this->max_size = data_length;
-        create_buffer(data, &buffer, &allocation, data_length * sizeof(T), usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        this->count = data_length;
+        this->initialise_dynamic(data, usage, data_length * sizeof(T));
     }
 
-    void fill_buffer(vulkan_data& vkdata, void* data)
+    bool fill_buffer(vulkan_data& vkdata, std::vector<T> input_data)
     {
-        ::fill_buffer(vkdata, allocation, this->max_size * sizeof(T), data);
+        return this->fill_buffer(vkdata, input_data.data(), input_data.size() * sizeof(T));
     }
 
-    void fill_buffer(vulkan_data& vkdata, std::vector<T> data)
-    {
-        this->size = data.size();
-        if (this->size > max_size)
-            abort();
-        ::fill_buffer(vkdata, allocation, data);
-    }
-
-    void terminate(vulkan_data& data)
-    {
-        vkDeviceWaitIdle(data.logical_device);
-        vmaDestroyBuffer(data.mem_allocator, buffer, allocation);
-    }
-
-    VkBuffer& get_vk_buffer() final
-    {
-        return buffer;
-    }
-
-    size_t get_count() final
-    {
-        return this->size;
+    size_t get_count() const {
+        return this->count; 
     }
 };

@@ -1,6 +1,5 @@
 
-#ifndef DISCOVERY_VULKAN_IMAGE_H
-#define DISCOVERY_VULKAN_IMAGE_H
+#pragma once
 
 #include "vulkan_base.h"
 
@@ -34,5 +33,3 @@ struct vulkan_sampler
     void initialise(vulkan_data& vkdata);
     void terminate(vulkan_data& vkdata);
 };
-
-#endif //DISCOVERY_VULKAN_IMAGE_H

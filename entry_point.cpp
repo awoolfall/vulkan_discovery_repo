@@ -10,8 +10,7 @@
 #include "src/basic_command_buffer.h"
 #include "src/platform.h"
 #include "src/transform.h"
-#include "model/gltf_reader.h"
-#include "model/model_3d.h"
+#include "model/gltf_model.h"
 
 #include <iostream>
 
@@ -75,25 +74,6 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
     
-    //    vulkan_image image{};
-    //    image.initialise_default(vkdata);
-    
-    basic_pipeline basic_p;
-    basic_p.initialise(vkdata, vkdata.render_pass);
-    
-    auto& basic_mvp = basic_p.mvp_uniform_buffer;
-    basic_mvp.data().model = glm::mat4(1.0);
-    basic_mvp.data().view = glm::translate(glm::mat4(1.0), {0.0, 0.0, -800.0});
-    basic_mvp.data().proj = glm::perspective(
-                                             glm::radians(60.0f),
-                                             vkdata.swap_chain_data.extent.width / (float) vkdata.swap_chain_data.extent.height,
-                                             0.1f, 10000.0f);
-    basic_mvp.update_buffer(vkdata);
-    
-    auto& basic_sampler = basic_p.sampler_buffer;
-    basic_sampler.sampler().initialise(vkdata);
-    //basic_sampler.image_view().initialise(vkdata, image);
-    
 //        std::vector<vertex> qvert_data = {
 //                {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
 //                {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
@@ -106,58 +86,25 @@ int main(int argc, char** argv)
 //                {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 //        };
     
-    std::vector<uint32_t> qindex_data = {0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4};
+    // std::vector<uint32_t> qindex_data = {0, 1, 2, 2, 3, 0,
+    //     4, 5, 6, 6, 7, 4};
 
-    model_3d m3d;
-    m3d.initialise_gltf(vkdata, "res/models/pony/scene.gltf");
-    m3d.load_model(vkdata);
-    m3d.set_proj(vkdata, glm::perspective(
-            glm::radians(60.0f),
-            vkdata.swap_chain_data.extent.width / (float) vkdata.swap_chain_data.extent.height,
-            0.1f, 10000.0f));
-    m3d.set_view(vkdata, glm::translate(glm::mat4(1.0), {0.0, 0.0, -4.0}));
-
-    gltf_reader m;
-    m.initialise("res/models/pony/scene.gltf");
-    if (!m.is_valid()) {
-        throw std::runtime_error("Unable to load model... " + m.err);
-    }
-    auto vert_data = m.create_vertex_array(0);
-    auto ii = m.create_indicies_array(0);
-    auto image = m.create_color_tex(vkdata, 0);
-    basic_sampler.image_view().initialise(vkdata, image);
-    basic_sampler.update_buffer(vkdata);
-    
-    dynamic_buffer<vertex> buffer;
-    buffer.initialise(vkdata, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vert_data.size());
-    buffer.fill_buffer(vkdata, vert_data);
-    
-    static_buffer<uint32_t> i_buf;
-    i_buf.initialise(vkdata, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, ii);
+    gltf_model gmodel;
+    gmodel.initialise("res/models/pony/scene.gltf");
+    gmodel.load_model(vkdata);
     
     triangle_cmd cmd;
-//    cmd.pipeline = &basic_p;
-//    cmd.vert_buffer = &buffer;
-//    cmd.index_buffer = &i_buf;
-    cmd.model = &m3d;
+    cmd.model = &gmodel;
     cmd.initialise(vkdata);
     
     glm::vec3 cameraPos = {0.0, 0.0, 0.0};
     glm::vec3 cameraRot = {0.0, 0.0, 0.0};
+    float cameraZoom = -800.0f;
     
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         
-        // update projection
-        basic_mvp.data().proj = glm::perspective(
-                glm::radians(60.0f),
-                vkdata.swap_chain_data.extent.width / (float) vkdata.swap_chain_data.extent.height,
-                0.1f, 10000.0f);
-        m3d.set_proj(vkdata, glm::perspective(
-                glm::radians(60.0f),
-                vkdata.swap_chain_data.extent.width / (float) vkdata.swap_chain_data.extent.height,
-                0.1f, 10000.0f));
+        // @TODO: update projection
         
         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2)) {
             if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) {
@@ -169,32 +116,31 @@ int main(int argc, char** argv)
                 glfwGetCursorPos(window, &cursorX, &cursorY);
                 cameraRot.y += (float)glm::radians(-cursorY/2.0);
                 cameraRot.x += (float)glm::radians(cursorX/2.0);
-                
-                glm::mat4 v = glm::translate(glm::mat4(1.0), {0.0, 0.0, -4.0});
-                v = glm::rotate(v, cameraRot.y, {1, 0, 0});
-                v = glm::rotate(v, cameraRot.x, {0, 1, 0});
-                v = glm::translate(v, cameraPos);
-                m3d.set_view(vkdata, v);
             }
             glfwSetCursorPos(window, 0.0, 0.0);
         } else {
             if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL)
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
-        
-        //buffer.fill_buffer(vkdata, vert_data);
-        basic_mvp.update_buffer(vkdata);
-        
+
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+            cameraZoom -= 0.05f;
+        } else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+            cameraZoom += 0.05f;
+        }
+
+        glm::mat4 v = glm::translate(glm::mat4(1.0), {0.0, 0.0, cameraZoom});
+        v = glm::rotate(v, cameraRot.y, {1, 0, 0});
+        v = glm::rotate(v, cameraRot.x, {0, 1, 0});
+        v = glm::translate(v, cameraPos);
+        // @TODO: set v to somewhere
+
         submit_command_buffers_graphics(vkdata, cmd.cmd_buffers());
         present_frame(vkdata);
     }
 
-    m3d.terminate(vkdata);
-    image.terminate(vkdata);
-    buffer.terminate(vkdata);
-    i_buf.terminate(vkdata);
+    gmodel.terminate(vkdata);
     cmd.terminate(vkdata);
-    basic_p.terminate(vkdata);
     terminate_vulkan(vkdata);
     glfwDestroyWindow(window);
     glfwTerminate();

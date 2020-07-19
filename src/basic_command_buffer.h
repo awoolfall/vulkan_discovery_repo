@@ -1,6 +1,6 @@
 #pragma once
 
-#include <model/model_3d.h>
+#include <model/gltf_model.h>
 #include "vulkan/vulkan_command_buffer.h"
 #include "basic_pipeline.h"
 
@@ -18,5 +18,5 @@ public:
     basic_pipeline* pipeline = nullptr;
     buffer_base* vert_buffer = nullptr;
     buffer_base* index_buffer = nullptr;
-    model_3d* model = nullptr;
+    gltf_model* model = nullptr;
 };

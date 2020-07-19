@@ -3,6 +3,8 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <array>
+#include <unordered_map>
+#include <queue>
 #include "vk_mem_alloc.h"
 
 class graphics_command_buffer;
@@ -10,6 +12,69 @@ class graphics_pipeline;
 class uniform_buffer_base;
 struct vulkan_image;
 struct vulkan_image_view;
+
+template <typename T>
+class ref_count {
+private:
+    T data;
+    int references = 0;
+
+public:
+    inline T& get() {
+        return this->data;
+    }
+    void add_ref() {
+        this->references += 1;
+    }
+    void rem_ref() {
+        this->references -= 1;
+    }
+    int num_references() const {
+        return this->references;
+    }
+};
+
+template <typename T>
+class dense_id_list {
+private:
+    std::queue<uint32_t> empty_ids;
+
+public:
+    std::vector<ref_count<T>> data;
+
+    uint32_t add(T element) {
+        if (empty_ids.empty()) {
+            // @TODO: better vector resizing
+            ref_count<T> new_entry;
+            new_entry.get() = element;
+            data.push_back(new_entry);
+            return (data.size - 1);
+        } else {
+            auto index = empty_ids.front();
+            ref_count<T> new_entry;
+            new_entry.get() = element;
+            data[index] = new_entry;
+            empty_ids.pop();
+            return index;
+        }
+    }
+
+    bool rem(uint32_t index) {
+        if (data.size > index) {
+            if (data[index].num_references() <= 0) {
+                this->empty_ids.push(index);
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
+struct vkimage_and_allocation
+{
+    VkImage image;
+    VmaAllocation allocation;
+};
 
 #define MAX_FRAMES_IN_FLIGHT 2
 struct vulkan_data
@@ -43,9 +108,11 @@ struct vulkan_data
     uint32_t current_frame = 0;
     std::vector<graphics_command_buffer*> registered_command_buffers;
     std::vector<graphics_pipeline*> registered_pipelines;
-    std::vector<vulkan_image_view*> registered_image_views;
     VmaAllocator mem_allocator;
     vulkan_image* default_image;
+
+    // @TODO: add lists of all vulkan structures in here (images, pipelines, views, cmd buffers, etc.) Probably as unordered_maps for ease
+    dense_id_list<vkimage_and_allocation> registered_images;
 };
 
 enum class shader_type {

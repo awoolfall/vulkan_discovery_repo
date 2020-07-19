@@ -85,8 +85,8 @@ void vulkan_image::initialise(vulkan_data& vkdata, const unsigned char* data, si
     }
     VkBuffer stagingBuffer;
     VmaAllocation stagingBufferAlloc;
-    create_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    fill_buffer(vkdata, stagingBufferAlloc, (size_t)imageSize, pixels);
+    ::create_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    ::fill_buffer(vkdata, stagingBufferAlloc, (size_t)imageSize, pixels);
     stbi_image_free(pixels);
 
     this->initialise_with_staging_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, texWidth, texHeight);
@@ -104,8 +104,8 @@ void vulkan_image::initialise(vulkan_data& vkdata, std::string abs_file_path) {
     }
     VkBuffer stagingBuffer;
     VmaAllocation stagingBufferAlloc;
-    create_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    fill_buffer(vkdata, stagingBufferAlloc, (size_t)imageSize, pixels);
+    ::create_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    ::fill_buffer(vkdata, stagingBufferAlloc, (size_t)imageSize, pixels);
     stbi_image_free(pixels);
 
     this->initialise_with_staging_buffer(vkdata, &stagingBuffer, &stagingBufferAlloc, texWidth, texHeight);
@@ -119,8 +119,8 @@ void vulkan_image::terminate(vulkan_data &vkdata) {
 }
 
 void vulkan_image::initialise_default(vulkan_data &vkdata) {
-    // 1 by 1 pink square
-    unsigned char pixels[4] = {255, 0, 255, 255};
+    // 1 by 1 white square
+    unsigned char pixels[4] = {255, 255, 255, 255};
 
     VkBuffer stagingBuffer;
     VmaAllocation stagingBufferAlloc;
