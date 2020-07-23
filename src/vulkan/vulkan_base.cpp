@@ -1,8 +1,4 @@
 #include "vulkan_base.h"
-#include "vulkan_command_buffer.h"
-#include "vulkan_graphics_pipeline.h"
-#include "vulkan_uniform_buffer.h"
-#include "vulkan_image.h"
 
 #include "../platform.h"
 
@@ -395,7 +391,8 @@ VkFormat find_depth_format(vulkan_data& data) {
 
 void create_render_pass(vulkan_data* data)
 {
-    // @TODO this will have to be updated in the future for depth passes, post processing etc.
+    // @TODO this will have to be updated in the future for post processing etc.
+    // @TODO multisampling
     VkAttachmentDescription colorAttachment = {};
     colorAttachment.format = data->swap_chain_data.image_format;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;

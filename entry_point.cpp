@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "src/vulkan/vulkan_graphics.h"
+#include "src/vulkan/vulkan_base.h"
 #include "src/basic_pipeline.h"
 #include "src/basic_command_buffer.h"
 #include "src/platform.h"

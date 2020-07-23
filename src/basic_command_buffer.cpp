@@ -21,46 +21,36 @@ void triangle_cmd::fill_command_buffer(vulkan_data& vkdata, size_t index)
 
     vkCmdBeginRenderPass(cmd_buffer(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    for (auto& node : model->nodes) {
-        if (node.has_mesh()) {
+    // not the best solution. models may contain repeating nodes in a scene
+    for (auto& node : model->model().nodes) {
+        if (node.mesh >= 0) {
             vkCmdBindPipeline(cmd_buffer(),
                               VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              node.pipeline.get_pipeline(vkdata));
-
-            VkBuffer vert_buffers[] = {model->meshes[node.mesh_index].vertex_buffer.get_vk_buffer()};
-            VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(cmd_buffer(), 0, 1, vert_buffers, offsets);
-            vkCmdBindIndexBuffer(cmd_buffer(), model->meshes[node.mesh_index].index_buffer.get_vk_buffer(), 0, VK_INDEX_TYPE_UINT32);
+                              this->pipeline.get_pipeline(vkdata));
 
             vkCmdBindDescriptorSets(cmd_buffer(),
-                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    node.pipeline.get_pipeline_layout(),
-                                    0, 1,
-                                    &node.pipeline.get_descriptor_set(index),
-                                    0, nullptr);
+                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        this->pipeline.get_pipeline_layout(),
+                        0, 1,
+                        &node.pipeline.get_descriptor_set(index),
+                        0, nullptr);
 
-            vkCmdDrawIndexed(cmd_buffer(), model->meshes[node.mesh_index].index_buffer.get_count(), 1, 0, 0, 0);
+            // @TODO: deal with meshes with more than 1 primitive
+            auto& primitive_data = model->vk_mesh_data()[node.mesh].primitive_data.front();
+
+            VkBuffer vert_buffers[] = {primitive_data.vertex_buffer.get_vk_buffer()};
+            VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(cmd_buffer(), 0, 1, vert_buffers, offsets);
+
+            // determine whether the mesh is indexed or not and draw accordingly
+            if (primitive_data.has_index_buffer) {
+                vkCmdBindIndexBuffer(cmd_buffer(), primitive_data.index_buffer.get_vk_buffer(), 0, VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(cmd_buffer(), primitive_data.index_buffer.get_count(), 1, 0, 0, 0);
+            } else {
+                vkCmdDraw(cmd_buffer(), primitive_data.vertex_buffer.get_count(), 1, 0, 0);
+            }
         }
     }
-
-//    vkCmdBindPipeline(cmd_buffer(),
-//                      VK_PIPELINE_BIND_POINT_GRAPHICS,
-//                      this->pipeline->get_pipeline(vkdata));
-//
-//    VkBuffer vert_buffers[] = {this->vert_buffer->get_vk_buffer()};
-//    VkBuffer index_buffers[] = {this->index_buffer->get_vk_buffer()};
-//    VkDeviceSize offsets[] = {0};
-//    vkCmdBindVertexBuffers(cmd_buffer(), 0, 1, vert_buffers, offsets);
-//    vkCmdBindIndexBuffer(cmd_buffer(), this->index_buffer->get_vk_buffer(), 0, VK_INDEX_TYPE_UINT32);
-//
-//    vkCmdBindDescriptorSets(cmd_buffer(),
-//                            VK_PIPELINE_BIND_POINT_GRAPHICS,
-//                            this->pipeline->get_pipeline_layout(),
-//                            0, 1,
-//                            &this->pipeline->get_descriptor_set(index),
-//                            0, nullptr);
-//
-//    vkCmdDrawIndexed(cmd_buffer(), this->index_buffer->get_count(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(cmd_buffer());
 }

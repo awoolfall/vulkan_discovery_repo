@@ -2,9 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <basic_pipeline.h>
-#include "vulkan/vulkan_image.h"
-#include "vulkan/vulkan_buffer.h"
-#include "vulkan/vulkan_graphics_pipeline.h"
+#include "vulkan/vulkan_base.h"
 #include <include/tiny_gltf.h>
 
 struct vertex {

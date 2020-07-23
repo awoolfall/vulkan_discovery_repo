@@ -1,4 +1,4 @@
-#include "vulkan_buffer.h"
+#include "vulkan_base.h"
 
 void cmd_copy_data_to_buffer(vulkan_data& data, VkBuffer src_buffer, VkBuffer dst_buffer, size_t data_size)
 {

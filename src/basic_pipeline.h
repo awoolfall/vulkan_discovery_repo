@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan/vulkan_graphics_pipeline.h"
+#include "vulkan/vulkan_base.h"
 #include "glm/glm.hpp"
 
 class basic_pipeline : public graphics_pipeline
