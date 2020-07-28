@@ -188,14 +188,15 @@ void graphics_pipeline::initialise_routine(vulkan_data &vkdata, VkRenderPass inp
     if (!this->uniformBufferDecls.empty()) {
         // create layout bindings
         this->descriptor_set_layouts.resize(this->uniformBufferDecls.size());
-        for (uniform_buffer_decl& decl : this->uniformBufferDecls) {
+        for (size_t i = 0; i < this->uniformBufferDecls.size(); i++) {
+            auto& decl = this->uniformBufferDecls[i];
             VkDescriptorSetLayoutBinding layout_binding = create_descriptor_set_binding(decl.binding, decl.type, decl.shaderFlags);
 
             VkDescriptorSetLayoutCreateInfo layoutInfo = {};
             layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
             layoutInfo.bindingCount = 1;
             layoutInfo.pBindings = &layout_binding;
-            if (vkCreateDescriptorSetLayout(vkdata.logical_device, &layoutInfo, nullptr, &this->descriptor_set_layouts[decl.binding]) !=
+            if (vkCreateDescriptorSetLayout(vkdata.logical_device, &layoutInfo, nullptr, &this->descriptor_set_layouts[i]) !=
                 VK_SUCCESS) {
                 throw std::runtime_error("failed to create descriptor set layout!");
             }

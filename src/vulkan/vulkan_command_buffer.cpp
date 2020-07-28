@@ -40,7 +40,7 @@ void graphics_command_buffer::reinitialise(vulkan_data& data)
             throw std::runtime_error("failed to begin recording command buffer!");
         }
 
-        this->current_index = i;
+        this->current_index = static_cast<uint32_t>(i);
         this->fill_command_buffer(data, i);
 
         if (vkEndCommandBuffer(this->command_buffers[i]) != VK_SUCCESS) {
@@ -51,6 +51,7 @@ void graphics_command_buffer::reinitialise(vulkan_data& data)
 
 void graphics_command_buffer::terminate(vulkan_data& data)
 {
+    this->virtual_terminate(data);
     if (!command_buffers.empty()) {
         unregister_command_buffer(data, this);
         vkDeviceWaitIdle(data.logical_device);

@@ -14,8 +14,8 @@ private:
     void rec_fill_command_buffer_model(vulkan_data& vkdata, const size_t& index, const tinygltf::Node& current_node, glm::mat4 parent_transform);
 
 protected:
-    void fill_command_buffer(vulkan_data& vkdata, size_t index) final;
     VkCommandBufferLevel get_buffer_level() const final;
+    void virtual_terminate(vulkan_data& vkdata) final;
 
 public:
     basic_pipeline* pipeline = nullptr;
@@ -26,5 +26,6 @@ public:
 
     // @TODO: terminate all buffers
     void preterminate(vulkan_data& data);
+    void fill_command_buffer(vulkan_data& vkdata, size_t index) final;
 
 };

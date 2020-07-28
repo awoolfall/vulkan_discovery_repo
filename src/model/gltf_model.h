@@ -17,6 +17,7 @@ struct prim_data {
     static_buffer<vertex> vertex_buffer;
     static_buffer<uint32_t> index_buffer;
     bool has_index_buffer = false;
+    int color_tex = -1;
 };
 
 struct mesh_data {

@@ -8,8 +8,24 @@ VkCommandBufferLevel triangle_cmd::get_buffer_level() const {
     return VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 }
 
+void triangle_cmd::virtual_terminate(vulkan_data& vkdata) 
+{
+    for (auto& buf_set : this->m_uniform_buffers) {
+        for (auto& buf : buf_set) {
+            buf.terminate(vkdata);
+        }
+    }
+    for (auto& buf : this->vp_uniform_buffers) {
+        buf.terminate(vkdata);
+    }
+    for (auto& buf : this->color_uniform_buffers) {
+        buf.terminate(vkdata);
+    }
+}
+
 void triangle_cmd::fill_command_buffer(vulkan_data& vkdata, size_t index)
 {
+
     // ready model uniform buffers for this frame
     if (this->m_uniform_buffers.size() <= index) {
         this->m_uniform_buffers.emplace_back();
@@ -79,16 +95,24 @@ void triangle_cmd::rec_fill_command_buffer_model(vulkan_data& vkdata, const size
         auto& ubo = this->m_uniform_buffers[index].emplace_back();
         ubo.data().transform = transform;
         ubo.initialise(vkdata, 1, this->pipeline->get_descriptor_set_layout(1));
+        ubo.update_buffer(vkdata);
+
+        // @TODO: deal with meshes with more than 1 primitive
+        const auto& primitive_data = this->model->vk_mesh_data()[current_node.mesh].primitive_data.front();
 
         // record render commands
         vkCmdBindPipeline(cmd_buffer(),
                           VK_PIPELINE_BIND_POINT_GRAPHICS,
                           this->pipeline->get_pipeline(vkdata));
 
+        int color_tex = primitive_data.color_tex;
+        if (color_tex < 0)
+            color_tex = 0;
+
         std::array<VkDescriptorSet, 3> descriptor_sets = {
-            ubo.get_descriptor_set(index),
             this->vp_uniform_buffers[index].get_descriptor_set(index),
-            this->color_uniform_buffers[index].get_descriptor_set(index)
+            ubo.get_descriptor_set(index),
+            this->color_uniform_buffers[color_tex].get_descriptor_set(index)
         };
 
         // @TODO fix crash on this line. crashes because set count is above 1?
@@ -98,9 +122,6 @@ void triangle_cmd::rec_fill_command_buffer_model(vulkan_data& vkdata, const size
                                 0, static_cast<uint32_t>(descriptor_sets.size()),
                                 descriptor_sets.data(),
                                 0, nullptr);
-
-        // @TODO: deal with meshes with more than 1 primitive
-        const auto& primitive_data = this->model->vk_mesh_data()[current_node.mesh].primitive_data.front();
 
         VkBuffer vert_buffers[] = {primitive_data.vertex_buffer.get_vk_buffer()};
         VkDeviceSize offsets[] = {0};

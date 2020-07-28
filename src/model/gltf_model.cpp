@@ -53,6 +53,7 @@ prim_data load_prim(vulkan_data& vkdata, tinygltf::Model& model, tinygltf::Primi
     auto& pos_buffer = model.buffers[pos_buffer_view.buffer];
     pos_data = reinterpret_cast<const float*>(&pos_buffer.data[pos_accessor.byteOffset + pos_buffer_view.byteOffset]);
     if (tex_coords) {
+        p.color_tex = model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.index;
         int base_color_tex_index = model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.texCoord;
         auto &tex_a = model.accessors[atribs.at(("TEXCOORD_" + std::to_string(base_color_tex_index)))];
         auto &tex_bv = model.bufferViews[tex_a.bufferView];
@@ -73,7 +74,7 @@ prim_data load_prim(vulkan_data& vkdata, tinygltf::Model& model, tinygltf::Primi
         }
     }
 
-    p.vertex_buffer.initialise_static(vkdata, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, output.data(), output.size() * sizeof(vertex));
+    p.vertex_buffer.initialise(vkdata, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, output);
 
     /* index buffer */
     if (prim.indices >= 0) {
@@ -92,7 +93,8 @@ prim_data load_prim(vulkan_data& vkdata, tinygltf::Model& model, tinygltf::Primi
             output = std::vector<uint32_t>(i_data, i_data + accessor.count);
         }
 
-        p.index_buffer.initialise_static(vkdata, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, output.data(), output.size() * sizeof(uint32_t));
+        //p.index_buffer.initialise_static(vkdata, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, output.data(), output.size() * sizeof(uint32_t));
+        p.index_buffer.initialise(vkdata, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, output);
     } else {
         p.has_index_buffer = false;
     }

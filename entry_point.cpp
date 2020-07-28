@@ -145,7 +145,7 @@ int main(int argc, char** argv)
 
         cmd.reterminate(vkdata);
         cmd.reinitialise(vkdata); // @TODO: make it only update what is necessary
-        
+
         submit_command_buffers_graphics(vkdata, cmd.cmd_buffers());
         present_frame(vkdata);
     }

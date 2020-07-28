@@ -171,8 +171,8 @@ class graphics_command_buffer
 private:
     std::vector<VkCommandBuffer> command_buffers;
     uint32_t current_index = 0;
-    uint32_t flags = 0x00;
-    VkCommandBufferLevel buffer_level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    uint32_t flags = 0x00 | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    VkCommandBufferLevel buffer_level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
 public:
     void initialise(vulkan_data& data);
@@ -185,6 +185,7 @@ protected:
     virtual void fill_command_buffer(vulkan_data& data, size_t index) = 0;
     virtual VkCommandBufferLevel get_buffer_level() const;
     virtual uint32_t get_flags() const;
+    virtual void virtual_terminate(vulkan_data& vkdata) {};
 
     inline VkCommandBuffer& cmd_buffer() {
         return command_buffers[current_index];
@@ -431,6 +432,8 @@ protected:
     }
 
     void virtual_terminate(vulkan_data& data) final {
+        this->image_view_data.terminate(data);
+        this->sampler_data.terminate(data);
     }
 
     uniform_info get_uniform_info(size_t index) final {

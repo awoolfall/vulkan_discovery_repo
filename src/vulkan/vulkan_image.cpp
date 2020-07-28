@@ -78,7 +78,7 @@ void transition_image_layout(vulkan_data& vkdata, VkImage image, VkImageLayout o
 
 void vulkan_image::initialise(vulkan_data& vkdata, const unsigned char* data, size_t data_length) {
     int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load_from_memory(data, data_length, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load_from_memory(data, static_cast<int>(data_length), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
     if (!pixels) {
         throw std::runtime_error("failed to load texture image!");
