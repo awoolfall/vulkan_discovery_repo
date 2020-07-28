@@ -13,7 +13,7 @@ private:
     ref_count<T>* ref_count_server;
 
 public:
-    ref(ref_count<T>* input) {
+    explicit ref(ref_count<T>* input) {
         this->ref_count_server = input;
         this->ref_count_server->add_ref();
     }
@@ -23,14 +23,14 @@ public:
     inline T& get() {
         return this->ref_count_server->data;
     }
-    int num_references() const {
+    [[nodiscard]] int num_references() const {
         return this->ref_count_server->num_references();
     }
 };
 
 template <typename T>
 class ref_count {
-friend class ref;
+friend class ref<T>;
 private:
     T data;
     int references = 0;
@@ -45,7 +45,7 @@ public:
     void rem_ref() {
         this->references -= 1;
     }
-    int num_references() const {
+    [[nodiscard]] int num_references() const {
         return this->references;
     }
 };

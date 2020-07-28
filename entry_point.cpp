@@ -89,12 +89,16 @@ int main(int argc, char** argv)
     // std::vector<uint32_t> qindex_data = {0, 1, 2, 2, 3, 0,
     //     4, 5, 6, 6, 7, 4};
 
+    basic_pipeline pipeline;
+    pipeline.initialise(vkdata, vkdata.render_pass);
+
     gltf_model gmodel;
     gmodel.initialise("res/models/pony/scene.gltf");
     gmodel.load_model(vkdata);
-    
+
     triangle_cmd cmd;
     cmd.model = &gmodel;
+    cmd.pipeline = &pipeline;
     cmd.initialise(vkdata);
     
     glm::vec3 cameraPos = {0.0, 0.0, 0.0};
@@ -103,8 +107,10 @@ int main(int argc, char** argv)
     
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-        
-        // @TODO: update projection
+
+        int h,w;
+        glfwGetWindowSize(window, &w, &h);
+        cmd.projection_matrix = glm::perspective(45.0, ((double)w / (double)h), 0.1, 10000.0);
         
         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2)) {
             if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) {
@@ -133,14 +139,20 @@ int main(int argc, char** argv)
         v = glm::rotate(v, cameraRot.y, {1, 0, 0});
         v = glm::rotate(v, cameraRot.x, {0, 1, 0});
         v = glm::translate(v, cameraPos);
+        cmd.view_matrix = v;
         // @TODO: set v to somewhere
 
+
+        cmd.reterminate(vkdata);
+        cmd.reinitialise(vkdata); // @TODO: make it only update what is necessary
+        
         submit_command_buffers_graphics(vkdata, cmd.cmd_buffers());
         present_frame(vkdata);
     }
 
     gmodel.terminate(vkdata);
     cmd.terminate(vkdata);
+    pipeline.terminate(vkdata);
     terminate_vulkan(vkdata);
     glfwDestroyWindow(window);
     glfwTerminate();

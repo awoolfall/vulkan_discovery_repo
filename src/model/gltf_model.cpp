@@ -13,7 +13,6 @@ void gltf_model::initialise(const std::string& path)
 {
     this->relative_path = path;
     this->relative_path.erase(this->relative_path.find_last_of("/\\")+1);
-    this->relative_path += "/";
 
     this->_is_valid = this->loader.LoadASCIIFromFile(&this->gltf_model, &this->err, &this->warn, ::to_absolute_path(path));
 }
@@ -26,10 +25,11 @@ void gltf_model::terminate(vulkan_data& vkdata)
 
 prim_data load_prim(vulkan_data& vkdata, tinygltf::Model& model, tinygltf::Primitive& prim)
 {
-    prim_data p;
     if (prim.mode != 4) {
         throw std::runtime_error("Non triangle rendering mode is currently not supported");
     }
+
+    prim_data p;
 
     /* set vertex buffer */
     auto& atribs = prim.attributes;
@@ -122,7 +122,7 @@ void gltf_model::load_model(vulkan_data& vkdata)
     }
 
     /* load images */
-    this->_image_data.resize(this->gltf_model.images.size());
+    this->_image_data.reserve(this->gltf_model.images.size());
     for (size_t i = 0; i < this->gltf_model.images.size(); i++) {
         // load image
         auto vkim = load_image(vkdata, this->relative_path, this->gltf_model.images[i]);
@@ -130,11 +130,11 @@ void gltf_model::load_model(vulkan_data& vkdata)
     }
 
     /* load meshes */
-    this->_mesh_data.resize(this->gltf_model.meshes.size());
+    this->_mesh_data.reserve(this->gltf_model.meshes.size());
     for (size_t m = 0; m < this->gltf_model.meshes.size(); m++) {
         // load mesh
         mesh_data md;
-        md.primitive_data.resize(this->gltf_model.meshes[m].primitives.size());
+        md.primitive_data.reserve(this->gltf_model.meshes[m].primitives.size());
         for (size_t p = 0; p < this->gltf_model.meshes[m].primitives.size(); p++) {
             // load primative
             auto pd = load_prim(vkdata, this->gltf_model, this->gltf_model.meshes[m].primitives[p]);

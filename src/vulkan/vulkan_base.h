@@ -63,7 +63,7 @@ public:
 
     // @TODO: add lists of all vulkan structures in here (images, pipelines, views, cmd buffers, etc.) Probably as unordered_maps for ease
     dense_id_list<vkimage_and_allocation> registered_images;
-    dense_id_list<graphics_pipeline> registered_pipelines;
+    //dense_id_list<graphics_pipeline> registered_pipelines;
 };
 
 
@@ -213,7 +213,7 @@ private:
     void clear_shader_stages(vulkan_data& data);
 
     std::vector<uniform_buffer_decl> uniformBufferDecls;
-    VkDescriptorSetLayout descriptor_set_layout;
+    std::vector<VkDescriptorSetLayout> descriptor_set_layouts;
     std::vector<uniform_buffer_base*> allocated_uniform_buffers;
 
     void initialise_routine(vulkan_data& vkdata, VkRenderPass input_render_pass);
@@ -248,6 +248,7 @@ public:
 
     VkPipeline& get_pipeline(vulkan_data& vkdata);
     VkPipelineLayout& get_pipeline_layout();
+    VkDescriptorSetLayout get_descriptor_set_layout(size_t binding);
 };
 
 
@@ -276,7 +277,7 @@ VkVertexInputBindingDescription get_binding_description_instanced(size_t binding
 }
 
 
-inline uniform_buffer_decl new_uniform_buffer_decl(uint32_t binding, VkDescriptorType type, uniform_buffer_base* buffer, VkShaderStageFlagBits shaderFlags) {
+inline uniform_buffer_decl new_uniform_buffer_decl(uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits shaderFlags) {
     uniform_buffer_decl decl;
     decl.binding = binding;
     decl.type = type;
@@ -312,7 +313,7 @@ struct vulkan_image_view
 {
     VkImageView imageView;
 
-    void initialise(vulkan_data& vkdata, vulkan_image& image);
+    void initialise(vulkan_data& vkdata, const VkImage& image);
     void terminate(vulkan_data& vkdata);
 };
 
@@ -356,10 +357,11 @@ protected:
     void update_descriptor_sets(vulkan_data& vkdata);
 
 public:
-    void initialise(vulkan_data &vkdata, uint32_t binding);
+    void initialise(vulkan_data &vkdata, uint32_t binding, VkDescriptorSetLayout descriptor_set_layout);
     void terminate(vulkan_data& vk_data);
 
     void rebuild_descriptor_sets(vulkan_data& vkdata, VkDescriptorSetLayout descriptor_set_layout);
+    VkDescriptorSet get_descriptor_set(size_t index) const;
 
 };
 

@@ -8,7 +8,7 @@
 #include "vk_mem_alloc.h"
 
 
-struct physical_device_indicies
+struct physical_device_indices
 {
     bool has_graphics_queue = false;
     uint32_t graphics_queue_index = 0;
@@ -84,9 +84,9 @@ void create_surface(vulkan_data* data, GLFWwindow* window)
     }
 }
 
-physical_device_indicies get_device_indicies(VkPhysicalDevice device, VkSurfaceKHR surface)
+physical_device_indices get_device_indices(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
-    physical_device_indicies indicies{};
+    physical_device_indices indices{};
 
     uint32_t num_queue_families = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &num_queue_families, nullptr);
@@ -95,21 +95,21 @@ physical_device_indicies get_device_indicies(VkPhysicalDevice device, VkSurfaceK
     int index = 0;
     for (VkQueueFamilyProperties prop : queue_family_properties) {
         if (prop.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            indicies.has_graphics_queue = true;
-            indicies.graphics_queue_index = index;
+            indices.has_graphics_queue = true;
+            indices.graphics_queue_index = index;
         }
 
         VkBool32 present_support = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(device, index, surface, &present_support);
         if (present_support) {
-            indicies.has_present_queue = true;
-            indicies.present_queue_index = index;
+            indices.has_present_queue = true;
+            indices.present_queue_index = index;
         }
 
         index++;
     }
 
-    return indicies;
+    return indices;
 }
 
 bool check_device_extension_support(VkPhysicalDevice device, std::vector<const char*>& deviceExtensions)
@@ -158,14 +158,14 @@ swap_chain_support_details query_swap_chain_support(VkPhysicalDevice device, VkS
 
 bool is_device_suitable(VkPhysicalDevice device, VkSurfaceKHR surface, std::vector<const char*>& required_extensions)
 {
-    auto indicies = get_device_indicies(device, surface);
+    auto indices = get_device_indices(device, surface);
     bool ext = check_device_extension_support(device, required_extensions);
     bool swap_chain_is_adequate = false;
     if (ext) {
         auto details = query_swap_chain_support(device, surface);
         swap_chain_is_adequate = !details.formats.empty() && !details.present_modes.empty();
     }
-    return indicies.has_graphics_queue && ext && swap_chain_is_adequate;
+    return indices.has_graphics_queue && ext && swap_chain_is_adequate;
 }
 
 void pick_physical_device(vulkan_data* data, std::vector<const char*>& required_extensions)
@@ -216,10 +216,10 @@ void pick_physical_device(vulkan_data* data, std::vector<const char*>& required_
 
 void create_logical_device(vulkan_data* data, std::vector<const char*>& required_extensions)
 {
-    auto queue_indicies = get_device_indicies(data->physical_device, data->surface);
+    auto queue_indices = get_device_indices(data->physical_device, data->surface);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::vector<uint32_t> uniqueQueueFamilies = {queue_indicies.graphics_queue_index, queue_indicies.present_queue_index};
+    std::vector<uint32_t> uniqueQueueFamilies = {queue_indices.graphics_queue_index, queue_indices.present_queue_index};
 
     float queuePriority = 1.0f;
     for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -245,8 +245,8 @@ void create_logical_device(vulkan_data* data, std::vector<const char*>& required
         throw std::runtime_error("failed to create logical device!");
     }
 
-    vkGetDeviceQueue(data->logical_device, queue_indicies.graphics_queue_index, 0, &data->graphics_queue);
-    vkGetDeviceQueue(data->logical_device, queue_indicies.present_queue_index, 0, &data->present_queue);
+    vkGetDeviceQueue(data->logical_device, queue_indices.graphics_queue_index, 0, &data->graphics_queue);
+    vkGetDeviceQueue(data->logical_device, queue_indices.present_queue_index, 0, &data->present_queue);
 }
 
 VkSurfaceFormatKHR choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats)
@@ -308,7 +308,7 @@ void create_swap_chain(vulkan_data* data, uint32_t width, uint32_t height)
     createInfo.preTransform = swap_chain_support.capabilities.currentTransform;
 
     // specify ownership for sharing images across queue families
-    auto indices = get_device_indicies(data->physical_device, data->surface);
+    auto indices = get_device_indices(data->physical_device, data->surface);
     uint32_t queueFamilyIndices[] = {indices.graphics_queue_index, indices.present_queue_index};
     if (indices.graphics_queue_index != indices.present_queue_index) {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -477,7 +477,7 @@ void create_frame_buffers(vulkan_data* data)
 
 void create_command_pools(vulkan_data* data)
 {
-    auto indicies = get_device_indicies(data->physical_device, data->surface);
+    auto indicies = get_device_indices(data->physical_device, data->surface);
 
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -857,5 +857,3 @@ void fill_buffer(vulkan_data& vkdata, VmaAllocation& alloc, size_t data_length, 
     memcpy(mapped_mem, data_start, data_length);
     vmaUnmapMemory(vkdata.mem_allocator, alloc);
 }
-
-/* https://vulkan-tutorial.com/en/Loading_models - Loading Models! */

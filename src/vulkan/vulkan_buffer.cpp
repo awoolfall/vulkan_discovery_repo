@@ -37,6 +37,7 @@ void cmd_copy_data_to_buffer(vulkan_data& data, VkBuffer src_buffer, VkBuffer ds
 
 void buffer_base::initialise_static(vulkan_data& data, VkBufferUsageFlagBits usage, void* input_data, size_t byte_size)
 {
+    this->is_static = true;
     this->max_byte_size = byte_size;
     ::create_buffer(data, &buffer, &allocation, byte_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage, VMA_MEMORY_USAGE_GPU_ONLY);
     VkBuffer staging_buffer; VmaAllocation staging_allocation;
@@ -48,6 +49,7 @@ void buffer_base::initialise_static(vulkan_data& data, VkBufferUsageFlagBits usa
 
 void buffer_base::initialise_dynamic(vulkan_data& data, VkBufferUsageFlagBits usage, size_t byte_size)
 {
+    this->is_static = false;
     this->max_byte_size = byte_size;
     ::create_buffer(data, &buffer, &allocation, byte_size, usage, VMA_MEMORY_USAGE_CPU_TO_GPU);
 }

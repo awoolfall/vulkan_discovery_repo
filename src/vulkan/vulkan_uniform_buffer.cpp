@@ -1,6 +1,6 @@
 #include "vulkan_base.h"
 
-void uniform_buffer_base::initialise(vulkan_data &vkdata, uint32_t binding) {
+void uniform_buffer_base::initialise(vulkan_data &vkdata, uint32_t binding, VkDescriptorSetLayout descriptor_set_layout) {
     this->uniform_binding = binding;
     this->virtual_initialise(vkdata, binding);
     this->rebuild_descriptor_sets(vkdata, descriptor_set_layout);
@@ -56,7 +56,7 @@ void uniform_buffer_base::rebuild_descriptor_sets(vulkan_data& vkdata, VkDescrip
 void uniform_buffer_base::update_descriptor_sets(vulkan_data& vkdata) {
     // create writeDescriptorSets and update
     for (size_t i = 0; i < vkdata.swap_chain_data.images.size(); i++) {
-        auto& info = this->get_uniform_info(i);
+        auto info = this->get_uniform_info(i);
 
         VkWriteDescriptorSet descriptorWrite = {};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -71,4 +71,8 @@ void uniform_buffer_base::update_descriptor_sets(vulkan_data& vkdata) {
 
         vkUpdateDescriptorSets(vkdata.logical_device, 1, &descriptorWrite, 0, nullptr);
     }
+}
+
+VkDescriptorSet uniform_buffer_base::get_descriptor_set(size_t index) const {
+    return this->descriptor_sets[index];
 }

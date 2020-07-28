@@ -15,15 +15,16 @@ public:
         VERTEX_INPUT_DESCRIPTIONS(vertex);
     };
 
-    struct mvp_ubo
+    struct vp_ubo
     {
-        glm::mat4 model = glm::mat4(1.0);
         glm::mat4 view = glm::mat4(1.0);
         glm::mat4 proj = glm::mat4(1.0);
     };
 
-    uniform_buffer<mvp_ubo> mvp_uniform_buffer;
-    sampler_uniform_buffer sampler_buffer;
+    struct m_ubo
+    {
+        glm::mat4 transform = glm::mat4(1.0);
+    };
 
 protected:
     void gen_vertex_input_info(vulkan_data& data,
