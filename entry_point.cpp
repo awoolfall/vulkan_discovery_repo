@@ -14,15 +14,6 @@
 
 #include <iostream>
 
-const float quad_verticies[18] = {
-    -0.5f, 0.5f, 0.0f,
-    0.5f, 0.5f, 0.0f,
-    -0.5f, -0.5f, 0.0f,
-    0.5f, 0.5f, 0.0f,
-    0.5f, -0.5f, 0.0f,
-    -0.5f, -0.5f, 0.0f
-};
-
 void perform_camera_control(GLFWwindow* window, entt::registry& Registry, entt::entity Camera)
 {
     transform& cam_transform = Registry.get<transform> (Camera);
@@ -78,21 +69,21 @@ int main(int argc, char** argv)
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
-    
-//        std::vector<vertex> qvert_data = {
-//                {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-//                {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-//                {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-//                {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-//
-//                {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-//                {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-//                {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-//                {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-//        };
+
+    // std::vector<vertex> qvert_data = {
+    //         {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    //         {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    //         {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    //         {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+
+    //         {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    //         {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    //         {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    //         {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+    // };
     
     // std::vector<uint32_t> qindex_data = {0, 1, 2, 2, 3, 0,
-    //     4, 5, 6, 6, 7, 4};
+    //                                      4, 5, 6, 6, 7, 4};
 
     basic_pipeline pipeline;
     pipeline.initialise(vkdata, vkdata.render_pass);
@@ -118,6 +109,7 @@ int main(int argc, char** argv)
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
+        /* do time stuff */
         double deltaTime;
         {
             double t = glfwGetTime();
@@ -125,10 +117,12 @@ int main(int argc, char** argv)
             timeLastFrame = t;
         }
 
+        /* redo projection in case window size changed */
         int h,w;
         glfwGetWindowSize(window, &w, &h);
         cmd.projection_matrix = glm::perspective(45.0, ((double)w / (double)h), 0.1, 10000.0);
         
+        /* input for camera control */
         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2)) {
             if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) {
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -146,14 +140,17 @@ int main(int argc, char** argv)
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
 
+        /* zoom control */
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
             desiredCameraZoom -= deltaTime * 100.0;
         } else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             desiredCameraZoom += deltaTime * 100.0;
         }
 
+        /* lerp to desired camera */
         cameraZoom = lerpValue(cameraZoom, desiredCameraZoom, deltaTime * 5.0);
 
+        /* update camera's view matrix */
         glm::mat4 v = glm::translate(glm::mat4(1.0), {0.0, 0.0, cameraZoom});
         v = glm::rotate(v, cameraRot.y, {1, 0, 0});
         v = glm::rotate(v, cameraRot.x, {0, 1, 0});
@@ -161,10 +158,11 @@ int main(int argc, char** argv)
         cmd.view_matrix = v;
         // @TODO: set v to somewhere
 
-
+        /* remake command buffers for this frame */
         cmd.reterminate(vkdata);
         cmd.reinitialise(vkdata); // @TODO: make it only update what is necessary
 
+        /* frame submission */
         submit_command_buffers_graphics(vkdata, cmd.cmd_buffers());
         present_frame(vkdata);
     }

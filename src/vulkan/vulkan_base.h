@@ -51,6 +51,11 @@ public:
         VmaAllocation image_allocation;
         VkImageView image_view;
     } depth_resources;
+    struct {
+        VkImage image;
+        VmaAllocation image_allocation;
+        VkImageView image_view;
+    } color_resources;
     std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> image_available_sems;
     std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> render_finished_sems;
     std::array<VkFence, MAX_FRAMES_IN_FLIGHT> in_flight_fences;
@@ -60,10 +65,7 @@ public:
     std::vector<graphics_pipeline*> registered_pipelines;
     VmaAllocator mem_allocator;
     vulkan_image* default_image;
-
-    // @TODO: add lists of all vulkan structures in here (images, pipelines, views, cmd buffers, etc.) Probably as unordered_maps for ease
-    dense_id_list<vkimage_and_allocation> registered_images;
-    //dense_id_list<graphics_pipeline> registered_pipelines;
+    VkSampleCountFlagBits msaa_samples = VK_SAMPLE_COUNT_8_BIT;
 };
 
 

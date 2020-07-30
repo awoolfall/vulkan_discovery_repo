@@ -25,7 +25,6 @@ void triangle_cmd::virtual_terminate(vulkan_data& vkdata)
 
 void triangle_cmd::fill_command_buffer(vulkan_data& vkdata, size_t index)
 {
-
     // ready model uniform buffers for this frame
     if (index == this->m_uniform_buffers.size()) {
         this->m_uniform_buffers.emplace_back();
@@ -81,7 +80,8 @@ void triangle_cmd::fill_command_buffer(vulkan_data& vkdata, size_t index)
 
     vkCmdBeginRenderPass(cmd_buffer(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    for (auto n : this->model->model().scenes.front().nodes) {
+    int scene_to_load = this->model->model().defaultScene;
+    for (auto n : this->model->model().scenes[scene_to_load].nodes) {
         this->rec_fill_command_buffer_model(vkdata, index, this->model->model().nodes[n], glm::mat4(1.0f));
     }
 
