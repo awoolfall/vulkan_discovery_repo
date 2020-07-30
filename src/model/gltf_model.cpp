@@ -99,6 +99,15 @@ prim_data load_prim(vulkan_data& vkdata, tinygltf::Model& model, tinygltf::Primi
         p.has_index_buffer = false;
     }
 
+    /* bounds */
+    p.prim_bounds.max.x = pos_accessor.maxValues[0];
+    p.prim_bounds.max.y = pos_accessor.maxValues[1];
+    p.prim_bounds.max.z = pos_accessor.maxValues[2];
+
+    p.prim_bounds.min.x = pos_accessor.minValues[0];
+    p.prim_bounds.min.y = pos_accessor.minValues[1];
+    p.prim_bounds.min.z = pos_accessor.minValues[2];
+
     /* return populated prim data */
     return p;
 }
@@ -194,6 +203,26 @@ const std::vector<mesh_data>& gltf_model::vk_mesh_data() const
 const std::vector<vulkan_image>& gltf_model::vk_image_data() const
 {
     return this->_image_data;
+}
+
+bounds gltf_model::get_model_bounds() const
+{
+    bounds ret;
+    ret.max.x = ret.max.y = ret.max.z = -99999999999999999999.0;
+    ret.min.x = ret.min.y = ret.min.z = 99999999999999999999.0;
+
+    for (auto& m : this->_mesh_data) {
+        for (auto& p : m.primitive_data) {
+            ret.max.x = std::max(ret.max.x, p.prim_bounds.max.x);
+            ret.max.y = std::max(ret.max.y, p.prim_bounds.max.y);
+            ret.max.z = std::max(ret.max.z, p.prim_bounds.max.z);
+
+            ret.min.x = std::min(ret.min.x, p.prim_bounds.min.x);
+            ret.min.y = std::min(ret.min.y, p.prim_bounds.min.y);
+            ret.min.z = std::min(ret.min.z, p.prim_bounds.min.z);
+        }
+    }
+    return ret;
 }
 
 

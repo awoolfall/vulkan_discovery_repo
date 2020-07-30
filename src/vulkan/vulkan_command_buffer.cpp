@@ -11,7 +11,7 @@ void graphics_command_buffer::initialise(vulkan_data& data)
         this->terminate(data);
     }
     this->reinitialise(data);
-    register_command_buffer(data, this);
+    //register_command_buffer(data, this);
 }
 
 void graphics_command_buffer::reinitialise(vulkan_data& data)
@@ -53,7 +53,7 @@ void graphics_command_buffer::terminate(vulkan_data& data)
 {
     this->virtual_terminate(data);
     if (!command_buffers.empty()) {
-        unregister_command_buffer(data, this);
+        //unregister_command_buffer(data, this);
         vkDeviceWaitIdle(data.logical_device);
         vkFreeCommandBuffers(data.logical_device, data.command_pool_graphics, (uint32_t)this->command_buffers.size(), this->command_buffers.data());
         this->command_buffers.clear();

@@ -59,6 +59,11 @@ void perform_camera_control(GLFWwindow* window, entt::registry& Registry, entt::
     cam_transform.position.z += screen_space_movement.z;
 }
 
+template <typename T>
+T lerpValue(T start, T end, double t) {
+    return (start + (t * (end - start)));
+}
+
 int main(int argc, char** argv)
 {
     glfwInit();
@@ -94,6 +99,7 @@ int main(int argc, char** argv)
 
     gltf_model gmodel;
     gmodel.initialise("res/models/pony/scene.gltf");
+    //gmodel.initialise("res/models/car.gltf");
     gmodel.load_model(vkdata);
 
     triangle_cmd cmd;
@@ -101,12 +107,23 @@ int main(int argc, char** argv)
     cmd.pipeline = &pipeline;
     cmd.initialise(vkdata);
     
+    auto gmodel_bounds = gmodel.get_model_bounds();
+
     glm::vec3 cameraPos = {0.0, 0.0, 0.0};
     glm::vec3 cameraRot = {0.0, 0.0, 0.0};
-    float cameraZoom = -800.0f;
+    float cameraZoom = -3000.0f;
+    float desiredCameraZoom = -1.0f * std::max({gmodel_bounds.max.x, gmodel_bounds.max.y, gmodel_bounds.max.z});
     
+    double timeLastFrame = glfwGetTime();
     while(!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+        double deltaTime;
+        {
+            double t = glfwGetTime();
+            deltaTime = t - timeLastFrame;
+            timeLastFrame = t;
+        }
 
         int h,w;
         glfwGetWindowSize(window, &w, &h);
@@ -130,10 +147,12 @@ int main(int argc, char** argv)
         }
 
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            cameraZoom -= 0.05f;
+            desiredCameraZoom -= deltaTime * 100.0;
         } else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            cameraZoom += 0.05f;
+            desiredCameraZoom += deltaTime * 100.0;
         }
+
+        cameraZoom = lerpValue(cameraZoom, desiredCameraZoom, deltaTime * 5.0);
 
         glm::mat4 v = glm::translate(glm::mat4(1.0), {0.0, 0.0, cameraZoom});
         v = glm::rotate(v, cameraRot.y, {1, 0, 0});

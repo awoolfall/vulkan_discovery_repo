@@ -13,11 +13,17 @@ struct vertex {
     VERTEX_INPUT_DESCRIPTIONS(vertex);
 };
 
+struct bounds {
+    glm::vec3 max = glm::vec3(0.0);
+    glm::vec3 min = glm::vec3(0.0);
+};
+
 struct prim_data {
     static_buffer<vertex> vertex_buffer;
     static_buffer<uint32_t> index_buffer;
     bool has_index_buffer = false;
     int color_tex = -1;
+    bounds prim_bounds;
 };
 
 struct mesh_data {
@@ -47,6 +53,8 @@ public:
 
     bool is_valid() const;
     bool is_loaded() const;
+
+    bounds get_model_bounds() const;
 
     const tinygltf::Model& model() const;
     const std::vector<mesh_data>& vk_mesh_data() const;
