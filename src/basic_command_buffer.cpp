@@ -81,13 +81,13 @@ void triangle_cmd::fill_command_buffer(vulkan_data& vkdata, size_t index)
 
     int scene_to_load = this->model->model().defaultScene;
     for (auto n : this->model->model().scenes[scene_to_load].nodes) {
-        this->rec_fill_command_buffer_model(vkdata, recdata, index, this->model->model().nodes[n], glm::mat4(1.0f));
+        this->rec_fill_command_buffer_model(vkdata, index, this->model->model().nodes[n], glm::mat4(1.0f));
     }
 
     vkCmdEndRenderPass(cmd_buffer());
 }
 
-void triangle_cmd::rec_fill_command_buffer_model(vulkan_data &vkdata, triangle_cmd::RecData &recdata, const size_t &index, const tinygltf::Node &current_node, glm::mat4 transform) {
+void triangle_cmd::rec_fill_command_buffer_model(vulkan_data &vkdata, const size_t &index, const tinygltf::Node &current_node, glm::mat4 transform) {
     // modify to combine this nodes transform with parent's transform
     if (!current_node.matrix.empty()) {
         transform += glm::mat4({
@@ -117,16 +117,16 @@ void triangle_cmd::rec_fill_command_buffer_model(vulkan_data &vkdata, triangle_c
         // color tex
         int color_tex = primitive_data.tex_indexes.color;
         if (color_tex >= 0) {
-            if (recdata.tex_map.count(color_tex) == 0) {
+            if (this->tex_map.count(color_tex) == 0) {
                 // tex does not yet exist as descriptor, create it
-                recdata.tex_map.emplace(color_tex, static_cast<int>(this->sampler_buffers.size()));
+                this->tex_map.emplace(color_tex, static_cast<int>(this->sampler_buffers.size()));
                 this->sampler_buffers.push_back({});
                 this->sampler_buffers.back().image_view().initialise(vkdata, this->model->vk_image_data()[color_tex].image);
                 this->sampler_buffers.back().sampler().initialise(vkdata);
                 this->sampler_buffers.back().initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(2));
             }
             // set tex to point in descriptor vec
-            color_tex = recdata.tex_map.at(color_tex);
+            color_tex = this->tex_map.at(color_tex);
         } else {
             // point to default color tex
             color_tex = 0;
@@ -135,16 +135,16 @@ void triangle_cmd::rec_fill_command_buffer_model(vulkan_data &vkdata, triangle_c
         // normal tex
         int normal_tex = primitive_data.tex_indexes.normal;
         if (normal_tex >= 0) {
-            if (recdata.tex_map.count(normal_tex) == 0) {
+            if (this->tex_map.count(normal_tex) == 0) {
                 // tex does not yet exist as descriptor, create it
-                recdata.tex_map.emplace(normal_tex, static_cast<int>(this->sampler_buffers.size()));
+                this->tex_map.emplace(normal_tex, static_cast<int>(this->sampler_buffers.size()));
                 this->sampler_buffers.push_back({});
                 this->sampler_buffers.back().image_view().initialise(vkdata, this->model->vk_image_data()[normal_tex].image);
                 this->sampler_buffers.back().sampler().initialise(vkdata);
                 this->sampler_buffers.back().initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(3));
             }
             // set tex to point in descriptor vec
-            normal_tex = recdata.tex_map.at(normal_tex);
+            normal_tex = this->tex_map.at(normal_tex);
         } else {
             // @TODO: point to default normal tex
             normal_tex = 1;
@@ -190,6 +190,6 @@ void triangle_cmd::rec_fill_command_buffer_model(vulkan_data &vkdata, triangle_c
 
     // do for all node children with new transform
     for (int c : current_node.children) {
-        rec_fill_command_buffer_model(vkdata, recdata, index, this->model->model().nodes[c], transform);
+        rec_fill_command_buffer_model(vkdata, index, this->model->model().nodes[c], transform);
     }
 }

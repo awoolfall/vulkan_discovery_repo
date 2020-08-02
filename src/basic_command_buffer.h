@@ -11,11 +11,9 @@ private:
     std::vector<std::vector<uniform_buffer<basic_pipeline::m_ubo>>> m_uniform_buffers;
     std::vector<sampler_uniform_buffer> sampler_buffers;
 
-    struct RecData {
-        std::unordered_map<int, int> tex_map;
-    } recdata;
+    std::unordered_map<int, int> sampler_tex_map;
 
-    void rec_fill_command_buffer_model(vulkan_data& vkdata, RecData& recdata, const size_t& index, const tinygltf::Node& current_node, glm::mat4 parent_transform);
+    void rec_fill_command_buffer_model(vulkan_data& vkdata, const size_t& index, const tinygltf::Node& current_node, glm::mat4 parent_transform);
 
 protected:
     VkCommandBufferLevel get_buffer_level() const final;

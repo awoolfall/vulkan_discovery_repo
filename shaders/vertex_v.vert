@@ -7,9 +7,12 @@ layout(location = 2) in vec2 inTexCoord;
 layout(location = 3) in vec3 inNormal;
 layout(location = 4) in vec4 inTangent;
 
-layout(location = 0) out vec3 fragColor;
-layout(location = 1) out vec2 fragTexCoord;
-layout(location = 2) out mat3 fragTBN;
+struct VS_OUT {
+    vec3 color;
+    vec2 texCoord;
+    mat3 TBN;
+};
+layout(location = 0) out VS_OUT vs_out;
 
 layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 view;
@@ -27,7 +30,13 @@ void main() {
     vertPos.y = -vertPos.y;
 
     gl_Position = (ubo.proj * ubo.view * model.transform) * vertPos;
-    fragColor = inColor;
-    fragTexCoord = inTexCoord;
-    fragTBN = mat3(0.0);
+    vs_out.color = inColor;
+    vs_out.texCoord = inTexCoord;
+
+    // normals (with re-orthoganalising)
+    vec3 tangent = normalize(vec3(model.transform * vec4(inTangent)));
+    vec3 normal = normalize(vec3(model.transform * vec4(inNormal, 0.0)));
+    tangent = normalize(tangent - dot(tangent, normal) * normal);
+    vec3 bitangent = cross(normal, tangent);
+    vs_out.TBN = mat3(tangent, bitangent, normal);
 }
