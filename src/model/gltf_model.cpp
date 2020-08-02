@@ -34,43 +34,68 @@ prim_data load_prim(vulkan_data& vkdata, tinygltf::Model& model, tinygltf::Primi
     /* set vertex buffer */
     auto& atribs = prim.attributes;
 
-    bool tex_coords = false, colors = false;
-    if (atribs.count("TEXCOORD_0") != 0) {
-        tex_coords = true;
-    }
-    if (atribs.count("COLOR_0") != 0) {
-        colors = true;
-    }
+    bool tex_coords = (atribs.count("TEXCOORD_0") != 0);
+    bool colors = (atribs.count("COLOR_0") != 0);
+    bool normals = (atribs.count("NORMAL") != 0);
+    bool tangents = (atribs.count("TANGENT") != 0);
 
     std::vector<vertex> output;
     size_t vertex_count = model.accessors[atribs.at("POSITION")].count;
     output.resize(vertex_count);
 
-    const float *pos_data, *tex_data;
+    const float *pos_data, *color_data, *tex_data, *norm_data, *tangent_data;
 
-    auto& pos_accessor = model.accessors[atribs.at("POSITION")];
-    auto& pos_buffer_view = model.bufferViews[pos_accessor.bufferView];
-    auto& pos_buffer = model.buffers[pos_buffer_view.buffer];
-    pos_data = reinterpret_cast<const float*>(&pos_buffer.data[pos_accessor.byteOffset + pos_buffer_view.byteOffset]);
+    auto get_data = [model, atribs](std::string attrib, const float* &data_ptr){
+        auto& accessor = model.accessors[atribs.at(attrib)];
+        auto& buffer_view = model.bufferViews[accessor.bufferView];
+        auto& buffer = model.buffers[buffer_view.buffer];
+        data_ptr = reinterpret_cast<const float*>(&buffer.data[accessor.byteOffset + buffer_view.byteOffset]);
+    };
+
+    get_data("POSITION", pos_data);
+
     if (tex_coords) {
-        p.color_tex = model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.index;
         int base_color_tex_index = model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.texCoord;
-        auto &tex_a = model.accessors[atribs.at(("TEXCOORD_" + std::to_string(base_color_tex_index)))];
-        auto &tex_bv = model.bufferViews[tex_a.bufferView];
-        auto &tex_b = model.buffers[tex_bv.buffer];
-        tex_data = reinterpret_cast<const float*>(&tex_b.data[tex_a.byteOffset + tex_bv.byteOffset]);
+        get_data(("TEXCOORD_" + std::to_string(base_color_tex_index)), tex_data);
+
+        /* tex indicies */
+        p.tex_indexes.color = model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.index;
+        p.tex_indexes.emissive = model.materials[prim.material].emissiveTexture.index;
+        p.tex_indexes.metal_roughness = model.materials[prim.material].pbrMetallicRoughness.metallicRoughnessTexture.index;
+        p.tex_indexes.normal = model.materials[prim.material].normalTexture.index;
     }
 
+    if (colors) get_data("COLOR_0", color_data);
+    if (normals) get_data("NORMAL", norm_data);
+    if (tangents) get_data("TANGENT", tangent_data);
+
     for (size_t i = 0; i < vertex_count; i++) {
-        size_t i_b = i * 3;
-        output[i].position[0] =  pos_data[i_b + 0];
-        output[i].position[1] =  pos_data[i_b + 1];
-        output[i].position[2] =  pos_data[i_b + 2];
+        output[i].position[0] =  pos_data[(i*3) + 0];
+        output[i].position[1] =  pos_data[(i*3) + 1];
+        output[i].position[2] =  pos_data[(i*3) + 2];
+
+        if (colors) {
+            output[i].color[0] = color_data[(i*3) + 0];
+            output[i].color[1] = color_data[(i*3) + 1];
+            output[i].color[2] = color_data[(i*3) + 2];
+        }
 
         if (tex_coords) {
-            size_t i_t = i * 2;
-            output[i].texcoord_color[0] = tex_data[i_t + 0];
-            output[i].texcoord_color[1] = tex_data[i_t + 1];
+            output[i].texcoord[0] = tex_data[(i*2) + 0];
+            output[i].texcoord[1] = tex_data[(i*2) + 1];
+        }
+
+        if (normals) {
+            output[i].normal[0] = norm_data[(i*3) + 0];
+            output[i].normal[1] = norm_data[(i*3) + 1];
+            output[i].normal[2] = norm_data[(i*3) + 2];
+        }
+
+        if (tangents) {
+            output[i].tangent[0] = tangent_data[(i*4) + 0];
+            output[i].tangent[1] = tangent_data[(i*4) + 1];
+            output[i].tangent[2] = tangent_data[(i*4) + 2];
+            output[i].tangent[3] = tangent_data[(i*4) + 3];
         }
     }
 
@@ -100,13 +125,14 @@ prim_data load_prim(vulkan_data& vkdata, tinygltf::Model& model, tinygltf::Primi
     }
 
     /* bounds */
-    p.prim_bounds.max.x = pos_accessor.maxValues[0];
-    p.prim_bounds.max.y = pos_accessor.maxValues[1];
-    p.prim_bounds.max.z = pos_accessor.maxValues[2];
+    auto& pos_accessor = model.accessors[atribs.at("POSITION")];
+    p.prim_bounds.max.x = static_cast<float>(pos_accessor.maxValues[0]);
+    p.prim_bounds.max.y = static_cast<float>(pos_accessor.maxValues[1]);
+    p.prim_bounds.max.z = static_cast<float>(pos_accessor.maxValues[2]);
 
-    p.prim_bounds.min.x = pos_accessor.minValues[0];
-    p.prim_bounds.min.y = pos_accessor.minValues[1];
-    p.prim_bounds.min.z = pos_accessor.minValues[2];
+    p.prim_bounds.min.x = static_cast<float>(pos_accessor.minValues[0]);
+    p.prim_bounds.min.y = static_cast<float>(pos_accessor.minValues[1]);
+    p.prim_bounds.min.z = static_cast<float>(pos_accessor.minValues[2]);
 
     /* return populated prim data */
     return p;
@@ -208,8 +234,8 @@ const std::vector<vulkan_image>& gltf_model::vk_image_data() const
 bounds gltf_model::get_model_bounds() const
 {
     bounds ret;
-    ret.max.x = ret.max.y = ret.max.z = -99999999999999999999.0;
-    ret.min.x = ret.min.y = ret.min.z = 99999999999999999999.0;
+    ret.max.x = ret.max.y = ret.max.z = -99999999909999.0f;
+    ret.min.x = ret.min.y = ret.min.z =  99999999999999.0f;
 
     for (auto& m : this->_mesh_data) {
         for (auto& p : m.primitive_data) {
@@ -225,6 +251,44 @@ bounds gltf_model::get_model_bounds() const
     return ret;
 }
 
+
+std::vector<VkVertexInputAttributeDescription> vertex::get_attribute_descriptions()
+{
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+    VkVertexInputAttributeDescription desc;
+    
+    desc.binding = 0;
+    desc.location = 0;
+    desc.format = VK_FORMAT_R32G32B32_SFLOAT;
+    desc.offset = offsetof(vertex, position);
+    attributeDescriptions.push_back(desc);
+
+    desc.binding = 0;
+    desc.location = 1;
+    desc.format = VK_FORMAT_R32G32B32_SFLOAT;
+    desc.offset = offsetof(vertex, color);
+    attributeDescriptions.push_back(desc);
+
+    desc.binding = 0;
+    desc.location = 2;
+    desc.format = VK_FORMAT_R32G32_SFLOAT;
+    desc.offset = offsetof(vertex, texcoord);
+    attributeDescriptions.push_back(desc);
+
+    desc.binding = 0;
+    desc.location = 3;
+    desc.format = VK_FORMAT_R32G32_SFLOAT;
+    desc.offset = offsetof(vertex, normal);
+    attributeDescriptions.push_back(desc);
+
+    desc.binding = 0;
+    desc.location = 4;
+    desc.format = VK_FORMAT_R32G32_SFLOAT;
+    desc.offset = offsetof(vertex, tangent);
+    attributeDescriptions.push_back(desc);
+
+    return attributeDescriptions;
+}
 
 
 // void flatten(std::vector<node_3d>& nodes, node_3d* node, glm::mat4 parent_transform) {

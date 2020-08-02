@@ -186,17 +186,37 @@ void graphics_pipeline::initialise_routine(vulkan_data &vkdata, VkRenderPass inp
     // create the descriptor set layout
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     if (!this->uniformBufferDecls.empty()) {
+        /* sort decls so that result is in order set 0..n with binding 0..m */
+        std::sort(this->uniformBufferDecls.begin(), this->uniformBufferDecls.end(), [](uniform_buffer_decl& a, uniform_buffer_decl& b){
+            if (a.set != b.set) {
+                return a.set < b.set;
+            } else {
+                return a.binding < b.binding;
+            }
+        });
+
         // create layout bindings
-        this->descriptor_set_layouts.resize(this->uniformBufferDecls.size());
         for (size_t i = 0; i < this->uniformBufferDecls.size(); i++) {
-            auto& decl = this->uniformBufferDecls[i];
-            VkDescriptorSetLayoutBinding layout_binding = create_descriptor_set_binding(decl.binding, decl.type, decl.shaderFlags);
+            uint32_t this_set = this->uniformBufferDecls[i].set;
+
+            // combine declarations of the same set into a descriptor set layout
+            std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
+            while (i < this->uniformBufferDecls.size()) {
+                auto& decl = this->uniformBufferDecls[i];
+                if (decl.set != this_set) {
+                    i--;
+                    break;
+                }
+                layout_bindings.push_back(create_descriptor_set_binding(decl.binding, decl.type, decl.shaderFlags));
+                i++;
+            }
 
             VkDescriptorSetLayoutCreateInfo layoutInfo = {};
             layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            layoutInfo.bindingCount = 1;
-            layoutInfo.pBindings = &layout_binding;
-            if (vkCreateDescriptorSetLayout(vkdata.logical_device, &layoutInfo, nullptr, &this->descriptor_set_layouts[i]) !=
+            layoutInfo.bindingCount = static_cast<uint32_t>(layout_bindings.size());
+            layoutInfo.pBindings = layout_bindings.data();
+            this->descriptor_set_layouts.push_back({});
+            if (vkCreateDescriptorSetLayout(vkdata.logical_device, &layoutInfo, nullptr, &this->descriptor_set_layouts.back()) !=
                 VK_SUCCESS) {
                 throw std::runtime_error("failed to create descriptor set layout!");
             }
@@ -290,8 +310,8 @@ void graphics_pipeline::reterminate(vulkan_data &vkdata) {
     this->terminate_routine(vkdata);
 }
 
-VkDescriptorSetLayout graphics_pipeline::get_descriptor_set_layout(size_t binding) {
-    return this->descriptor_set_layouts[binding];
+VkDescriptorSetLayout graphics_pipeline::get_descriptor_set_layout(size_t set) {
+    return this->descriptor_set_layouts[set];
 }
 
 VkPipelineShaderStageCreateInfo gen_shader_stage_info_from_spirv(vulkan_data& data, std::string abs_path, shader_type type, const char* entry_point)

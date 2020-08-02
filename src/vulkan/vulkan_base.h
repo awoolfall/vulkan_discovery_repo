@@ -202,11 +202,11 @@ protected:
 
 /* vulkan pipeline */
 struct uniform_buffer_decl {
+    uint32_t set = 0;
     uint32_t binding = 0;
     VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     VkShaderStageFlagBits shaderFlags = VK_SHADER_STAGE_VERTEX_BIT;
 };
-
 
 class graphics_pipeline
 {
@@ -251,7 +251,7 @@ public:
 
     VkPipeline& get_pipeline(vulkan_data& vkdata);
     VkPipelineLayout& get_pipeline_layout();
-    VkDescriptorSetLayout get_descriptor_set_layout(size_t binding);
+    VkDescriptorSetLayout get_descriptor_set_layout(size_t set);
 };
 
 
@@ -280,8 +280,9 @@ VkVertexInputBindingDescription get_binding_description_instanced(size_t binding
 }
 
 
-inline uniform_buffer_decl new_uniform_buffer_decl(uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits shaderFlags) {
+inline uniform_buffer_decl new_uniform_buffer_decl(uint32_t set, uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits shaderFlags) {
     uniform_buffer_decl decl;
+    decl.set = set;
     decl.binding = binding;
     decl.type = type;
     decl.shaderFlags = shaderFlags;

@@ -1,32 +1,6 @@
 #include "basic_pipeline.h"
 #include "platform.h"
-
-std::vector<VkVertexInputAttributeDescription> basic_pipeline::vertex::get_attribute_descriptions()
-{
-    std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-    VkVertexInputAttributeDescription desc;
-    
-    desc.binding = 0;
-    desc.location = 0;
-    desc.format = VK_FORMAT_R32G32B32_SFLOAT;
-    desc.offset = offsetof(vertex, pos);
-    attributeDescriptions.push_back(desc);
-
-    desc.binding = 0;
-    desc.location = 1;
-    desc.format = VK_FORMAT_R32G32B32_SFLOAT;
-    desc.offset = offsetof(vertex, color);
-    attributeDescriptions.push_back(desc);
-
-    desc.binding = 0;
-    desc.location = 2;
-    desc.format = VK_FORMAT_R32G32_SFLOAT;
-    desc.offset = offsetof(vertex, tex_coord);
-    attributeDescriptions.push_back(desc);
-
-    return attributeDescriptions;
-}
-
+#include "model/gltf_model.h"
 
 void basic_pipeline::gen_vertex_input_info(
         vulkan_data& data,
@@ -57,8 +31,9 @@ std::vector<VkDynamicState> basic_pipeline::gen_dynamic_state_info(vulkan_data& 
 
 std::vector<uniform_buffer_decl> basic_pipeline::get_uniform_buffer_declarations() {
     return {
-        new_uniform_buffer_decl(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT),
-        new_uniform_buffer_decl(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT),
-        new_uniform_buffer_decl(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        new_uniform_buffer_decl(0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT),
+        new_uniform_buffer_decl(1, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT),
+        new_uniform_buffer_decl(2, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT),
+        new_uniform_buffer_decl(3, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
     };
 }

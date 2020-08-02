@@ -8,7 +8,9 @@
 struct vertex {
     glm::vec3 position = glm::vec3(0.0);
     glm::vec3 color = glm::vec3(0.0);
-    glm::vec2 texcoord_color = glm::vec2(0.0);
+    glm::vec2 texcoord = glm::vec2(0.0);
+    glm::vec3 normal = glm::vec3(0.0);
+    glm::vec4 tangent = glm::vec4(0.0);
 
     VERTEX_INPUT_DESCRIPTIONS(vertex);
 };
@@ -22,7 +24,12 @@ struct prim_data {
     static_buffer<vertex> vertex_buffer;
     static_buffer<uint32_t> index_buffer;
     bool has_index_buffer = false;
-    int color_tex = -1;
+    struct {
+        int color = -1;
+        int emissive = -1;
+        int metal_roughness = -1;
+        int normal = -1;
+    } tex_indexes;
     bounds prim_bounds;
 };
 

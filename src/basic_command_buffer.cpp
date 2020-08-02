@@ -18,7 +18,7 @@ void triangle_cmd::virtual_terminate(vulkan_data& vkdata)
     for (auto& buf : this->vp_uniform_buffers) {
         buf.terminate(vkdata);
     }
-    for (auto& buf : this->color_uniform_buffers) {
+    for (auto& buf : this->sampler_buffers) {
         buf.terminate(vkdata);
     }
 }
@@ -47,21 +47,20 @@ void triangle_cmd::fill_command_buffer(vulkan_data& vkdata, size_t index)
 
     this->vp_uniform_buffers[index].data().view = this->view_matrix;
     this->vp_uniform_buffers[index].data().proj = this->projection_matrix;
+    this->vp_uniform_buffers[index].data().cameraPos = this->camera_pos;
     this->vp_uniform_buffers[index].update_buffer(vkdata);
 
     // fill color buffers
-    if (this->color_uniform_buffers.empty()) {
-        this->color_uniform_buffers.resize(this->model->vk_image_data().size()+1);
+    if (this->sampler_buffers.empty()) {
+        this->sampler_buffers.push_back({}); // fill in default texs
+        this->sampler_buffers.back().image_view().initialise(vkdata, vkdata.default_image->image);
+        this->sampler_buffers.back().sampler().initialise(vkdata);
+        this->sampler_buffers.back().initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(2));
 
-        this->color_uniform_buffers[0].image_view().initialise(vkdata, vkdata.default_image->image);
-        this->color_uniform_buffers[0].sampler().initialise(vkdata);
-        this->color_uniform_buffers[0].initialise(vkdata, 2, this->pipeline->get_descriptor_set_layout(2));
-
-        for (size_t i = 1; i < this->color_uniform_buffers.size(); i++) {
-            this->color_uniform_buffers[i].image_view().initialise(vkdata, this->model->vk_image_data()[i-1].image);
-            this->color_uniform_buffers[i].sampler().initialise(vkdata);
-            this->color_uniform_buffers[i].initialise(vkdata, 2, this->pipeline->get_descriptor_set_layout(2));
-        }
+        this->sampler_buffers.push_back({}); // fill in default texs
+        this->sampler_buffers.back().image_view().initialise(vkdata, vkdata.default_image->image);
+        this->sampler_buffers.back().sampler().initialise(vkdata);
+        this->sampler_buffers.back().initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(3));
     }
 
     // fill command buffer
@@ -82,13 +81,13 @@ void triangle_cmd::fill_command_buffer(vulkan_data& vkdata, size_t index)
 
     int scene_to_load = this->model->model().defaultScene;
     for (auto n : this->model->model().scenes[scene_to_load].nodes) {
-        this->rec_fill_command_buffer_model(vkdata, index, this->model->model().nodes[n], glm::mat4(1.0f));
+        this->rec_fill_command_buffer_model(vkdata, recdata, index, this->model->model().nodes[n], glm::mat4(1.0f));
     }
 
     vkCmdEndRenderPass(cmd_buffer());
 }
 
-void triangle_cmd::rec_fill_command_buffer_model(vulkan_data& vkdata, const size_t& index, const tinygltf::Node &current_node, glm::mat4 transform) {
+void triangle_cmd::rec_fill_command_buffer_model(vulkan_data &vkdata, triangle_cmd::RecData &recdata, const size_t &index, const tinygltf::Node &current_node, glm::mat4 transform) {
     // modify to combine this nodes transform with parent's transform
     if (!current_node.matrix.empty()) {
         transform += glm::mat4({
@@ -111,28 +110,62 @@ void triangle_cmd::rec_fill_command_buffer_model(vulkan_data& vkdata, const size
 
     // do render commands if necessary
     if (current_node.mesh >= 0) {
+        // @TODO: deal with meshes with more than 1 primitive
+        const auto& primitive_data = this->model->vk_mesh_data()[current_node.mesh].primitive_data.front();
+
+        /* tex data */
+        // color tex
+        int color_tex = primitive_data.tex_indexes.color;
+        if (color_tex >= 0) {
+            if (recdata.tex_map.count(color_tex) == 0) {
+                // tex does not yet exist as descriptor, create it
+                recdata.tex_map.emplace(color_tex, static_cast<int>(this->sampler_buffers.size()));
+                this->sampler_buffers.push_back({});
+                this->sampler_buffers.back().image_view().initialise(vkdata, this->model->vk_image_data()[color_tex].image);
+                this->sampler_buffers.back().sampler().initialise(vkdata);
+                this->sampler_buffers.back().initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(2));
+            }
+            // set tex to point in descriptor vec
+            color_tex = recdata.tex_map.at(color_tex);
+        } else {
+            // point to default color tex
+            color_tex = 0;
+        }
+
+        // normal tex
+        int normal_tex = primitive_data.tex_indexes.normal;
+        if (normal_tex >= 0) {
+            if (recdata.tex_map.count(normal_tex) == 0) {
+                // tex does not yet exist as descriptor, create it
+                recdata.tex_map.emplace(normal_tex, static_cast<int>(this->sampler_buffers.size()));
+                this->sampler_buffers.push_back({});
+                this->sampler_buffers.back().image_view().initialise(vkdata, this->model->vk_image_data()[normal_tex].image);
+                this->sampler_buffers.back().sampler().initialise(vkdata);
+                this->sampler_buffers.back().initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(3));
+            }
+            // set tex to point in descriptor vec
+            normal_tex = recdata.tex_map.at(normal_tex);
+        } else {
+            // @TODO: point to default normal tex
+            normal_tex = 1;
+        }
+
         // create m uniform buffer
         auto& ubo = this->m_uniform_buffers[index].emplace_back();
         ubo.data().transform = transform;
-        ubo.initialise(vkdata, 1, this->pipeline->get_descriptor_set_layout(1));
+        ubo.initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(1));
         ubo.update_buffer(vkdata);
-
-        // @TODO: deal with meshes with more than 1 primitive
-        const auto& primitive_data = this->model->vk_mesh_data()[current_node.mesh].primitive_data.front();
 
         // record render commands
         vkCmdBindPipeline(cmd_buffer(),
                           VK_PIPELINE_BIND_POINT_GRAPHICS,
                           this->pipeline->get_pipeline(vkdata));
 
-        int color_tex = primitive_data.color_tex;
-        if (color_tex < -1)
-            color_tex = -1;
-
-        std::array<VkDescriptorSet, 3> descriptor_sets = {
+        std::array<VkDescriptorSet, 4> descriptor_sets = {
             this->vp_uniform_buffers[index].get_descriptor_set(index),
             ubo.get_descriptor_set(index),
-            this->color_uniform_buffers[color_tex+1].get_descriptor_set(index)
+            this->sampler_buffers[color_tex].get_descriptor_set(index),
+            this->sampler_buffers[normal_tex].get_descriptor_set(index)
         };
 
         vkCmdBindDescriptorSets(cmd_buffer(),
@@ -157,6 +190,6 @@ void triangle_cmd::rec_fill_command_buffer_model(vulkan_data& vkdata, const size
 
     // do for all node children with new transform
     for (int c : current_node.children) {
-        rec_fill_command_buffer_model(vkdata, index, this->model->model().nodes[c], transform);
+        rec_fill_command_buffer_model(vkdata, recdata, index, this->model->model().nodes[c], transform);
     }
 }

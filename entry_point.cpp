@@ -102,8 +102,8 @@ int main(int argc, char** argv)
 
     glm::vec3 cameraPos = {0.0, 0.0, 0.0};
     glm::vec3 cameraRot = {0.0, 0.0, 0.0};
-    float cameraZoom = -3000.0f;
-    float desiredCameraZoom = -1.0f * std::max({gmodel_bounds.max.x, gmodel_bounds.max.y, gmodel_bounds.max.z});
+    double cameraZoom = -3000.0;
+    double desiredCameraZoom = -1.0 * (double)std::max({gmodel_bounds.max.x, gmodel_bounds.max.y, gmodel_bounds.max.z});
     
     double timeLastFrame = glfwGetTime();
     while(!glfwWindowShouldClose(window)) {
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
         v = glm::rotate(v, cameraRot.x, {0, 1, 0});
         v = glm::translate(v, cameraPos);
         cmd.view_matrix = v;
-        // @TODO: set v to somewhere
+        cmd.camera_pos = cameraPos;
 
         /* remake command buffers for this frame */
         cmd.reterminate(vkdata);
