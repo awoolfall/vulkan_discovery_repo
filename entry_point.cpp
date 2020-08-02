@@ -156,7 +156,7 @@ int main(int argc, char** argv)
         v = glm::rotate(v, cameraRot.x, {0, 1, 0});
         v = glm::translate(v, cameraPos);
         cmd.view_matrix = v;
-        cmd.camera_pos = cameraPos;
+        cmd.camera_pos = glm::vec4(v[3].x, v[3].y, v[3].z, 1.0) * v;
 
         /* remake command buffers for this frame */
         cmd.reterminate(vkdata);
