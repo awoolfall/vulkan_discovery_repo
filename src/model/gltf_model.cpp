@@ -277,13 +277,13 @@ std::vector<VkVertexInputAttributeDescription> vertex::get_attribute_description
 
     desc.binding = 0;
     desc.location = 3;
-    desc.format = VK_FORMAT_R32G32_SFLOAT;
+    desc.format = VK_FORMAT_R32G32B32_SFLOAT;
     desc.offset = offsetof(vertex, normal);
     attributeDescriptions.push_back(desc);
 
     desc.binding = 0;
     desc.location = 4;
-    desc.format = VK_FORMAT_R32G32_SFLOAT;
+    desc.format = VK_FORMAT_R32G32B32A32_SFLOAT;
     desc.offset = offsetof(vertex, tangent);
     attributeDescriptions.push_back(desc);
 

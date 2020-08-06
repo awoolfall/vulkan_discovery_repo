@@ -23,9 +23,8 @@ public:
     basic_pipeline* pipeline = nullptr;
     gltf_model* model = nullptr;
 
-    glm::mat4 projection_matrix = glm::mat4(1.0);
-    glm::mat4 view_matrix = glm::mat4(1.0);
     glm::vec3 camera_pos = glm::vec3(0.0);
+    basic_pipeline::vp_ubo frame_ubo;
 
     // @TODO: terminate all buffers
     void preterminate(vulkan_data& data);

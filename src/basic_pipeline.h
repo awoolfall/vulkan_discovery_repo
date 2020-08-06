@@ -1,7 +1,7 @@
 #pragma once
 
 #include "vulkan/vulkan_base.h"
-#include "glm/glm.hpp"
+#include <glm/glm.hpp>
 
 class basic_pipeline : public graphics_pipeline
 {
@@ -11,6 +11,7 @@ public:
         glm::mat4 view = glm::mat4(1.0);
         glm::mat4 proj = glm::mat4(1.0);
         glm::vec3 cameraPos = glm::vec3(0.0);
+        float currTime = 0.0f;
     };
 
     struct m_ubo

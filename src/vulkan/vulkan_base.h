@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <array>
+#include <string>
+#include <stdexcept>
 
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>

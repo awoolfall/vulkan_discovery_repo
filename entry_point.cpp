@@ -1,5 +1,5 @@
 #include <vulkan/vulkan.h>
-#include <glfw/glfw3.h>
+#include <GLFW/glfw3.h>
 
 #include <entt/entity/registry.hpp>
 #include <glm/glm.hpp>
@@ -120,7 +120,7 @@ int main(int argc, char** argv)
         /* redo projection in case window size changed */
         int h,w;
         glfwGetWindowSize(window, &w, &h);
-        cmd.projection_matrix = glm::perspective(45.0, ((double)w / (double)h), 0.1, 10000.0);
+        cmd.frame_ubo.proj = glm::perspective(45.0, ((double)w / (double)h), 0.1, 10000.0);
         
         /* input for camera control */
         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2)) {
@@ -155,8 +155,10 @@ int main(int argc, char** argv)
         v = glm::rotate(v, cameraRot.y, {1, 0, 0});
         v = glm::rotate(v, cameraRot.x, {0, 1, 0});
         v = glm::translate(v, cameraPos);
-        cmd.view_matrix = v;
-        cmd.camera_pos = glm::vec4(v[3].x, v[3].y, v[3].z, 1.0) * v;
+        cmd.frame_ubo.view = v;
+        
+        cmd.frame_ubo.cameraPos = glm::vec4(v[3].x, v[3].y, v[3].z, 1.0) * v;
+        cmd.frame_ubo.currTime = glfwGetTime();
 
         /* remake command buffers for this frame */
         cmd.reterminate(vkdata);

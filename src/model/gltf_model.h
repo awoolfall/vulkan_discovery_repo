@@ -6,11 +6,11 @@
 #include <include/tiny_gltf.h>
 
 struct vertex {
-    glm::vec3 position = glm::vec3(0.0);
-    glm::vec3 color = glm::vec3(0.0);
-    glm::vec2 texcoord = glm::vec2(0.0);
-    glm::vec3 normal = glm::vec3(0.0);
-    glm::vec4 tangent = glm::vec4(0.0);
+    glm::vec3 position = glm::vec3(0.0f);
+    glm::vec3 color = glm::vec3(0.0f);
+    glm::vec2 texcoord = glm::vec2(0.0f);
+    glm::vec3 normal = glm::vec3(0.0f);
+    glm::vec4 tangent = glm::vec4(0.0f);
 
     VERTEX_INPUT_DESCRIPTIONS(vertex);
 };

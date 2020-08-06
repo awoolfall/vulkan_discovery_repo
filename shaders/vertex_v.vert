@@ -11,6 +11,7 @@ struct VS_OUT {
     vec3 color;
     vec2 texCoord;
     mat3 TBN;
+    float currTime;
 };
 layout(location = 0) out VS_OUT vs_out;
 
@@ -18,6 +19,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
     vec3 cameraPos;
+    float currTime;
 } ubo;
 
 layout(set = 1, binding = 0) uniform ModelData {
@@ -33,10 +35,11 @@ void main() {
     vs_out.color = inColor;
     vs_out.texCoord = inTexCoord;
 
-    // normals (with re-orthoganalising)
-    vec3 tangent = normalize(vec3(model.transform * vec4(inTangent)));
+    // normals
+    vec3 tangent = normalize(vec3(model.transform * vec4(inTangent.xyz, 0.0)));
     vec3 normal = normalize(vec3(model.transform * vec4(inNormal, 0.0)));
-    tangent = normalize(tangent - dot(tangent, normal) * normal);
-    vec3 bitangent = cross(normal, tangent);
+    vec3 bitangent = normalize(vec3(model.transform * vec4(cross(inNormal, inTangent.xyz) * inTangent.w, 0.0)));
     vs_out.TBN = mat3(tangent, bitangent, normal);
+
+    vs_out.currTime = ubo.currTime;
 }
