@@ -219,12 +219,12 @@ void vulkan_image::initialise_with_staging_buffer(vulkan_data &vkdata, VkBuffer 
 }
 
 
-void vulkan_image_view::initialise(vulkan_data &vkdata, const VkImage &image) {
+void vulkan_image_view::initialise(vulkan_data &vkdata, const vulkan_image &image) {
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image;
+    viewInfo.image = image.image;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = vulkan_image::format;
+    viewInfo.format = image.format;
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = 1;

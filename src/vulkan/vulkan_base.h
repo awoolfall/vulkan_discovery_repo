@@ -303,7 +303,7 @@ struct vulkan_image
 {
     VkImage image;
     VmaAllocation allocation;
-    static const VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
     void initialise(vulkan_data& vkdata, const unsigned char* data, size_t data_length);
     void initialise(vulkan_data& vkdata, std::string abs_file_path);
@@ -319,7 +319,7 @@ struct vulkan_image_view
 {
     VkImageView imageView;
 
-    void initialise(vulkan_data& vkdata, const VkImage& image);
+    void initialise(vulkan_data& vkdata, const vulkan_image& image);
     void terminate(vulkan_data& vkdata);
 };
 

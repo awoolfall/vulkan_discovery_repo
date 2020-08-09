@@ -89,7 +89,7 @@ int main(int argc, char** argv)
     pipeline.initialise(vkdata, vkdata.render_pass);
 
     gltf_model gmodel;
-    //gmodel.initialise("res/models/pony/scene.gltf");
+    // gmodel.initialise("res/models/pony/scene.gltf");
     gmodel.initialise("res/models/viking/scene.gltf");
     //gmodel.initialise("res/models/car.gltf");
     gmodel.load_model(vkdata);

@@ -16,20 +16,23 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     vec3 lightColor = vec3(1.0);
-    vec3 lightDir = normalize(vec3(2.0 * cos(fs_in.currTime), 2.0 * sin(fs_in.currTime), 0.0));
+    vec3 lightDir = normalize(vec3(0.0, 2.0 * sin(fs_in.currTime), 2.0 * cos(fs_in.currTime)));
 
     float ambientStrength = 0.0;
     vec3 ambient = ambientStrength * lightColor;
 
     vec3 normal = normalize(texture(normTex, fs_in.texCoord).rgb);
     normal = normal * 2.0 - 1.0;
-    normal = fs_in.TBN * normal;
-    //normal = fs_in.TBN[2].xyz;
+    normal.y = -normal.y;
+
+    normal = normalize(fs_in.TBN * normal);
+    //normal = fs_in.TBN[0].xyz;
 
     vec3 diffuse = max(dot(normal, lightDir), 0.0) * lightColor;
 
     vec3 lightResult = (ambient + diffuse);
     outColor = texture(colorTex, fs_in.texCoord);
     outColor = vec4(lightResult, 1.0) * outColor;
-    //outColor = vec4(fs_in.TBN[0].xyz, 1.0);
+    //outColor = mix(vec4(fs_in.TBN[0].xyz, 1.0), vec4(fs_in.TBN[1].xyz, 1.0), 0.5);
+    //outColor = vec4(normalize(texture(normTex, fs_in.texCoord).rgb), 1.0);
 }

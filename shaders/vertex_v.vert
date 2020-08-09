@@ -31,22 +31,23 @@ void main() {
     vs_out.color = inColor;
     vs_out.texCoord = inTexCoord;
 
-    // normals
-    vec3 tangent = normalize(vec3(model.transform * vec4(inTangent.xyz, 0.0)));
-    vec3 normal = normalize(vec3(model.transform * vec4(inNormal, 0.0)));
+    /* normal mapping */
 
-    vec3 bitangent = (cross(inNormal, inTangent.xyz) * inTangent.w);
-    bitangent = normalize(vec3(model.transform * vec4(bitangent, 0.0)));
+    vec3 normal = normalize(inNormal);
+    vec3 tangent = normalize(inTangent.xyz);
 
-    /* tangent handedness fix */
-    // /* fix A */
-    // tangent = tangent * inTangent.w;
+    mat3 normMat = transpose(inverse(mat3(model.transform)));
+    normal = normalize(vec3(normMat * normal));
+    tangent = normalize(vec3(normMat * tangent));
 
-    /* fix B */
-    if (dot(cross(normal, tangent), bitangent) < 0.0) {
-        tangent = tangent * -1.0;
-    }
-    /* ~tangent handedness fix */
+    // tangent = normalize(tangent - dot(tangent, normal) * normal);
+
+    vec3 bitangent = normalize(cross(normal, tangent) * inTangent.w);
+
+    // /* tangent handedness fix */
+    // if (dot(cross(tangent, bitangent), normal) < 0.0) {
+    //     tangent = -tangent;
+    // }
 
     vs_out.TBN = mat3(tangent, bitangent, normal);
 

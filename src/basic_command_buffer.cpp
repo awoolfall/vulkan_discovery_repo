@@ -51,12 +51,12 @@ void triangle_cmd::fill_command_buffer(vulkan_data& vkdata, size_t index)
     // fill color buffers
     if (this->sampler_buffers.empty()) {
         this->sampler_buffers.push_back({}); // fill in default texs
-        this->sampler_buffers.back().image_view().initialise(vkdata, vkdata.default_image->image);
+        this->sampler_buffers.back().image_view().initialise(vkdata, *vkdata.default_image);
         this->sampler_buffers.back().sampler().initialise(vkdata);
         this->sampler_buffers.back().initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(2));
 
         this->sampler_buffers.push_back({}); // fill in default texs
-        this->sampler_buffers.back().image_view().initialise(vkdata, vkdata.default_image->image);
+        this->sampler_buffers.back().image_view().initialise(vkdata, *vkdata.default_image);
         this->sampler_buffers.back().sampler().initialise(vkdata);
         this->sampler_buffers.back().initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(3));
     }
@@ -119,7 +119,7 @@ void triangle_cmd::rec_fill_command_buffer_model(vulkan_data &vkdata, const size
                 // tex does not yet exist as descriptor, create it
                 this->sampler_tex_map.emplace(color_tex, static_cast<int>(this->sampler_buffers.size()));
                 this->sampler_buffers.push_back({});
-                this->sampler_buffers.back().image_view().initialise(vkdata, this->model->vk_image_data()[color_tex].image);
+                this->sampler_buffers.back().image_view().initialise(vkdata, this->model->vk_image_data()[color_tex]);
                 this->sampler_buffers.back().sampler().initialise(vkdata);
                 this->sampler_buffers.back().initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(2));
             }
@@ -137,7 +137,7 @@ void triangle_cmd::rec_fill_command_buffer_model(vulkan_data &vkdata, const size
                 // tex does not yet exist as descriptor, create it
                 this->sampler_tex_map.emplace(normal_tex, static_cast<int>(this->sampler_buffers.size()));
                 this->sampler_buffers.push_back({});
-                this->sampler_buffers.back().image_view().initialise(vkdata, this->model->vk_image_data()[normal_tex].image);
+                this->sampler_buffers.back().image_view().initialise(vkdata, this->model->vk_image_data()[normal_tex]);
                 this->sampler_buffers.back().sampler().initialise(vkdata);
                 this->sampler_buffers.back().initialise(vkdata, 0, this->pipeline->get_descriptor_set_layout(3));
             }

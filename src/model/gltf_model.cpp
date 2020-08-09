@@ -182,6 +182,16 @@ void gltf_model::load_model(vulkan_data& vkdata)
 
     // @TODO: load materials
 
+
+    /* fix image formats */
+    for (auto& mesh : this->_mesh_data) {
+        for (auto& prim : mesh.primitive_data) {
+            if (prim.tex_indexes.normal >= 0) {
+                this->_image_data[prim.tex_indexes.normal].format = VK_FORMAT_R8G8B8A8_UNORM;
+            }
+        }
+    }
+
     this->_is_loaded = true;
 }
 
