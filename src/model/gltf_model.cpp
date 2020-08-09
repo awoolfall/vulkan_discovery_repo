@@ -71,7 +71,7 @@ prim_data load_prim(vulkan_data& vkdata, tinygltf::Model& model, tinygltf::Primi
 
     for (size_t i = 0; i < vertex_count; i++) {
         output[i].position[0] =  pos_data[(i*3) + 0];
-        output[i].position[1] =  pos_data[(i*3) + 1];
+        output[i].position[1] =  -pos_data[(i*3) + 1];
         output[i].position[2] =  pos_data[(i*3) + 2];
 
         if (colors) {
@@ -87,13 +87,13 @@ prim_data load_prim(vulkan_data& vkdata, tinygltf::Model& model, tinygltf::Primi
 
         if (normals) {
             output[i].normal[0] = norm_data[(i*3) + 0];
-            output[i].normal[1] = norm_data[(i*3) + 1];
+            output[i].normal[1] = -norm_data[(i*3) + 1];
             output[i].normal[2] = norm_data[(i*3) + 2];
         }
 
         if (tangents) {
             output[i].tangent[0] = tangent_data[(i*4) + 0];
-            output[i].tangent[1] = tangent_data[(i*4) + 1];
+            output[i].tangent[1] = -tangent_data[(i*4) + 1];
             output[i].tangent[2] = tangent_data[(i*4) + 2];
             output[i].tangent[3] = tangent_data[(i*4) + 3];
         }
@@ -234,7 +234,7 @@ const std::vector<vulkan_image>& gltf_model::vk_image_data() const
 bounds gltf_model::get_model_bounds() const
 {
     bounds ret;
-    ret.max.x = ret.max.y = ret.max.z = -99999999909999.0f;
+    ret.max.x = ret.max.y = ret.max.z = -99999999999999.0f;
     ret.min.x = ret.min.y = ret.min.z =  99999999999999.0f;
 
     for (auto& m : this->_mesh_data) {

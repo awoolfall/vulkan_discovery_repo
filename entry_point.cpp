@@ -89,7 +89,8 @@ int main(int argc, char** argv)
     pipeline.initialise(vkdata, vkdata.render_pass);
 
     gltf_model gmodel;
-    gmodel.initialise("res/models/pony/scene.gltf");
+    //gmodel.initialise("res/models/pony/scene.gltf");
+    gmodel.initialise("res/models/viking/scene.gltf");
     //gmodel.initialise("res/models/car.gltf");
     gmodel.load_model(vkdata);
 
@@ -103,6 +104,11 @@ int main(int argc, char** argv)
     glm::vec3 cameraPos = {0.0, 0.0, 0.0};
     glm::vec3 cameraRot = {0.0, 0.0, 0.0};
     double cameraZoom = -3000.0;
+
+    cameraPos.x = (gmodel_bounds.max.x + gmodel_bounds.min.x)/2.0;
+    cameraPos.y = (gmodel_bounds.max.y + gmodel_bounds.min.y)/2.0;
+    cameraPos.z = (gmodel_bounds.max.z + gmodel_bounds.min.z)/2.0;
+
     double desiredCameraZoom = -1.0 * (double)std::max({gmodel_bounds.max.x, gmodel_bounds.max.y, gmodel_bounds.max.z});
     
     double timeLastFrame = glfwGetTime();

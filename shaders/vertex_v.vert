@@ -27,18 +27,27 @@ layout(set = 1, binding = 0) uniform ModelData {
 } model;
 
 void main() {
-    /* convert to vulkan coordinates (+y down) */
-    vec4 vertPos = vec4(inPosition, 1.0);
-    vertPos.y = -vertPos.y;
-
-    gl_Position = (ubo.proj * ubo.view * model.transform) * vertPos;
+    gl_Position = (ubo.proj * ubo.view * model.transform) * vec4(inPosition, 1.0);
     vs_out.color = inColor;
     vs_out.texCoord = inTexCoord;
 
     // normals
     vec3 tangent = normalize(vec3(model.transform * vec4(inTangent.xyz, 0.0)));
     vec3 normal = normalize(vec3(model.transform * vec4(inNormal, 0.0)));
-    vec3 bitangent = normalize(vec3(model.transform * vec4(cross(inNormal, inTangent.xyz) * inTangent.w, 0.0)));
+
+    vec3 bitangent = (cross(inNormal, inTangent.xyz) * inTangent.w);
+    bitangent = normalize(vec3(model.transform * vec4(bitangent, 0.0)));
+
+    /* tangent handedness fix */
+    // /* fix A */
+    // tangent = tangent * inTangent.w;
+
+    /* fix B */
+    if (dot(cross(normal, tangent), bitangent) < 0.0) {
+        tangent = tangent * -1.0;
+    }
+    /* ~tangent handedness fix */
+
     vs_out.TBN = mat3(tangent, bitangent, normal);
 
     vs_out.currTime = ubo.currTime;
