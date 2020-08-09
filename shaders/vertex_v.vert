@@ -32,24 +32,11 @@ void main() {
     vs_out.texCoord = inTexCoord;
 
     /* normal mapping */
-
-    vec3 normal = normalize(inNormal);
-    vec3 tangent = normalize(inTangent.xyz);
-
-    mat3 normMat = transpose(inverse(mat3(model.transform)));
-    normal = normalize(vec3(normMat * normal));
-    tangent = normalize(vec3(normMat * tangent));
-
-    // tangent = normalize(tangent - dot(tangent, normal) * normal);
-
-    vec3 bitangent = normalize(cross(normal, tangent) * inTangent.w);
-
-    // /* tangent handedness fix */
-    // if (dot(cross(tangent, bitangent), normal) < 0.0) {
-    //     tangent = -tangent;
-    // }
-
-    vs_out.TBN = mat3(tangent, bitangent, normal);
+    vec3 N = normalize(vec3(model.transform * vec4(inNormal, 0.0)));
+    vec3 T = normalize(vec3(model.transform * vec4(inTangent.xyz, 0.0)));
+    T = normalize(T - dot(T, N) * N);
+    vec3 B = cross(N, T) * inTangent.w;
+    vs_out.TBN = mat3(T, B, N);
 
     vs_out.currTime = ubo.currTime;
 }
