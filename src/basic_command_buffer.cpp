@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <array>
 
 VkCommandBufferLevel triangle_cmd::get_buffer_level() const {
@@ -87,24 +88,22 @@ void triangle_cmd::fill_command_buffer(vulkan_data& vkdata, size_t index)
 
 void triangle_cmd::rec_fill_command_buffer_model(vulkan_data &vkdata, const size_t &index, const tinygltf::Node &current_node, glm::mat4 transform) {
     // modify to combine this nodes transform with parent's transform
+    glm::mat4 this_transform = glm::mat4(1.0f);
     if (!current_node.matrix.empty()) {
-        transform += glm::mat4({
-            current_node.matrix[0], current_node.matrix[1], current_node.matrix[2], current_node.matrix[3],
-            current_node.matrix[4], current_node.matrix[5], current_node.matrix[6], current_node.matrix[7],
-            current_node.matrix[8], current_node.matrix[9], current_node.matrix[10], current_node.matrix[11],
-            current_node.matrix[12], current_node.matrix[13], current_node.matrix[14], current_node.matrix[15]
-        });
+        this_transform = glm::make_mat4x4(current_node.matrix.data());
     } else {
-        if (!current_node.scale.empty()) {
-            transform = glm::scale(transform, {(float)current_node.scale[0], (float)current_node.scale[1], (float)current_node.scale[2]});
+        if (!current_node.translation.empty()) {
+            this_transform = glm::translate(this_transform, glm::vec3(glm::make_vec3(current_node.translation.data())));
         }
         if (!current_node.rotation.empty()) {
-            transform = transform * glm::mat4_cast(glm::quat((float)current_node.rotation[0], (float)current_node.rotation[1], (float)current_node.rotation[2], (float)current_node.rotation[3]));
+            glm::quat q = glm::make_quat(current_node.rotation.data());
+            this_transform = this_transform * glm::mat4(q);
         }
-        if (!current_node.translation.empty()) {
-            transform = glm::translate(transform, {(float)current_node.translation[0], (float)current_node.translation[1], (float)current_node.translation[2]});
+        if (!current_node.scale.empty()) {
+            this_transform = glm::scale(this_transform, glm::vec3(glm::make_vec3(current_node.scale.data())));
         }
     }
+    transform = transform * this_transform;
 
     // do render commands if necessary
     if (current_node.mesh >= 0) {
