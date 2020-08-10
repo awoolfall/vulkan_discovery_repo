@@ -51,7 +51,7 @@ void perform_camera_control(GLFWwindow* window, entt::registry& Registry, entt::
 }
 
 template <typename T>
-T lerpValue(T start, T end, double t) {
+T lerpValue(T start, T end, float t) {
     return (start + (t * (end - start)));
 }
 
@@ -102,6 +102,7 @@ int main(int argc, char** argv)
     auto gmodel_bounds = gmodel.get_model_bounds();
 
     glm::vec3 cameraPos = {0.0, 0.0, 0.0};
+    glm::vec3 desiredCameraPos = cameraPos;
     glm::vec3 cameraRot = {0.0, 0.0, 0.0};
     double cameraZoom = -3000.0;
 
@@ -154,26 +155,27 @@ int main(int argc, char** argv)
         }
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            cameraPos.y -= deltaTime * 20.0;
+            desiredCameraPos.y += deltaTime * -cameraZoom;
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            cameraPos.y += deltaTime * 20.0;
+            desiredCameraPos.y -= deltaTime * -cameraZoom;
         } 
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            cameraPos.x -= deltaTime * 20.0;
+            desiredCameraPos.x += deltaTime * -cameraZoom;
         }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            cameraPos.x += deltaTime * 20.0;
+            desiredCameraPos.x -= deltaTime * -cameraZoom;
         } 
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-            cameraPos.z -= deltaTime * 20.0;
+            desiredCameraPos.z -= deltaTime * -cameraZoom;
         }
         if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-            cameraPos.z += deltaTime * 20.0;
+            desiredCameraPos.z += deltaTime * -cameraZoom;
         } 
 
         /* lerp to desired camera */
         cameraZoom = lerpValue(cameraZoom, desiredCameraZoom, deltaTime * 5.0);
+        cameraPos = lerpValue(cameraPos, desiredCameraPos, deltaTime * 20.0);
 
         /* update camera's view matrix */
         glm::mat4 v = glm::translate(glm::mat4(1.0), {0.0, 0.0, cameraZoom});
